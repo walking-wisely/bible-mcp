@@ -59,9 +59,10 @@ bible-mcp/
 
 A standalone Rust binary in `seed/` — not shipped to users.
 
-- [ ] Download WEB verse JSON (`thiagobodruk/bible` or eBible.org)
+- [ ] Download WEB verse JSON from `TehShrike/world-english-bible` (66 per-book JSON files under `json/`)
+  - Each file is an array of typed tokens; filter for `type == "paragraph text"`, concatenate multi-section verses
 - [ ] Parse into flat list: `{ book, book_num, chapter, verse, text }`
-- [ ] Batch embed all ~31K verses via Ollama (`nomic-embed-text`, 384-dim)
+- [ ] Batch embed all ~31K verses via Ollama (`nomic-embed-text`, 768-dim)
 - [ ] Write to SQLite with `sqlite-vec` virtual table and KNN index
 - [ ] Compute `sha256` of the resulting file
 - [ ] Upload `bible-web-nomic.db` to Cloudflare R2 (public bucket)
@@ -82,7 +83,7 @@ CREATE TABLE verses (
 );
 
 CREATE VIRTUAL TABLE verse_embeddings USING vec0(
-  embedding float[384]
+  embedding float[768]
 );
 ```
 

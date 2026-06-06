@@ -1,0 +1,8 @@
+sentence-transformers
+sqlite-vec
+requests
+tqdm
+boto3
+python-dotenv
+# optional: install ollama if using --backend ollama
+# ollama

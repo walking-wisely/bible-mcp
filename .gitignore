@@ -1,2 +1,5 @@
 seed/.env
 seed/cache/
+
+# Rust
+target/

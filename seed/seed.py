@@ -50,6 +50,7 @@ BASE_URL = "https://raw.githubusercontent.com/TehShrike/world-english-bible/mast
 XREF_URL = "https://a.openbible.info/data/cross-references.zip"
 HF_MODEL = "nomic-ai/nomic-embed-text-v1"   # sentence-transformers backend
 OLLAMA_MODEL = "nomic-embed-text"            # ollama backend
+EMBED_MODEL = "nomic-embed-text"             # canonical name for manifest
 EMBED_DIM = 768
 BATCH_SIZE = 64   # larger batches are fine on GPU
 

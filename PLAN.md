@@ -93,9 +93,11 @@ CREATE VIRTUAL TABLE verses_fts USING fts5(
 ```
 search_verses(query: str, limit: int = 5, book: str | None = None) → verses
 similar_verses(book: str, chapter: int, verse: int, limit: int = 5) → verses
+get_verse(book: str, chapter: int, verse: int) → verse
+get_passage(book: str, chapter: int, from_verse: int, to_verse: int) → verses
 ```
 
-Both return a list of:
+`search_verses` and `similar_verses` return a list of:
 ```json
 { "reference": "John 3:16", "book": "John", "chapter": 3, "verse": 16, "text": "...", "score": 0.91 }
 ```
@@ -218,6 +220,5 @@ dependencies = [
 - Cloud sync / remote MCP transport
 - Switching embedding models (requires re-seeding ~31K verses)
 - GUI / system tray
-- `get_verse` / `get_passage` direct lookup tools
 - Clustering / thematic grouping
 - Reading plan generation

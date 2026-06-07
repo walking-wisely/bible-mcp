@@ -199,23 +199,24 @@ Simple `SELECT` by `(book_num, chapter, verse)` with fuzzy book matching. No sco
 
 #### Implementation details
 
-- [ ] Wire `rmcp` with stdio transport, register four tools
-- [ ] `db.rs` — async SQLite via `tokio::task::spawn_blocking` for all blocking calls
-- [ ] `embed.rs` — lazy-init `fastembed::TextEmbedding`, download model on first call
-- [ ] RRF merge in pure Rust
-- [ ] Cross-ref + vector merge logic in `db.rs`
-- [ ] `get_verse` / `get_passage` — direct lookups by `(book_num, chapter, verse)`
+- [x] Wire `rmcp` with stdio transport, register four tools
+- [x] `db.rs` — async SQLite via `tokio::task::spawn_blocking` for all blocking calls
+- [x] `embed.rs` — lazy-init `fastembed::TextEmbedding` behind `Mutex`, download model on first call
+- [x] RRF merge in pure Rust
+- [x] Cross-ref + vector merge logic in `db.rs`
+- [x] `get_verse` / `get_passage` — direct lookups by `(book_num, chapter, verse)`
+- [ ] `mcp_tests.rs` — end-to-end tool call tests over stdin/stdout with an in-memory DB
 
 ---
 
 ### Phase 3 — CLI (`src/main.rs`)
 
-| Command | Description |
-|---|---|
-| `bible-mcp setup` | First-run wizard: download embedding model + DB, write Claude Code MCP config |
-| `bible-mcp serve` | Start the MCP stdio server (what Claude Code invokes) |
-| `bible-mcp status` | Show config, DB path, embedding model cache status |
-| `bible-mcp update` | Re-check manifest and re-download DB if version changed |
+| Command | Description | Status |
+|---|---|---|
+| `bible-mcp setup` | First-run wizard: download embedding model + DB, write Claude Code MCP config | ✅ scaffolded |
+| `bible-mcp serve` | Start the MCP stdio server (what Claude Code invokes) | ✅ done |
+| `bible-mcp status` | Show config, DB path, embedding model cache status | ✅ done |
+| `bible-mcp update` | Re-check manifest and re-download DB if version changed | ✅ done |
 
 **`bible-mcp setup` flow:**
 1. Download `bible-web-nomic.db` from R2 with progress bar → `~/.local/share/bible-mcp/bible.db`
@@ -233,14 +234,25 @@ Simple `SELECT` by `(book_num, chapter, verse)` with fuzzy book matching. No sco
    }
    ```
 
+**Outstanding — `setup` on Windows:**
+- `fastembed = { version = "5", features = ["ort-load-dynamic"] }` is used so the binary can
+  build on `x86_64-pc-windows-gnu`. At runtime the `onnxruntime.dll` must be on `PATH` or
+  `ORT_DYLIB_PATH` must be set.
+- [ ] `setup` should auto-download `onnxruntime.dll` from the ORT GitHub releases and place it
+  next to the binary (or in `~/.local/share/bible-mcp/`), then set `ORT_DYLIB_PATH` in
+  `config.json` so `serve` exports it before spawning the ONNX session.
+
 ---
 
 ### Phase 4 — Packaging & distribution
 
-- [ ] `Cargo.toml` with `[[bin]] name = "bible-mcp"`
-- [ ] GitHub Actions release workflow — cross-compile for `x86_64-unknown-linux-musl`, `x86_64-apple-darwin`, `aarch64-apple-darwin`, `x86_64-pc-windows-msvc` on tag
+- [x] `Cargo.toml` with `[lib]` + `[[bin]] name = "bible-mcp"`
+- [ ] GitHub Actions CI — `cargo test` on every push (all three platforms)
+- [ ] GitHub Actions release workflow — cross-compile for `x86_64-unknown-linux-musl`,
+  `x86_64-apple-darwin`, `aarch64-apple-darwin`, `x86_64-pc-windows-msvc` on tag
 - [ ] Upload binaries to GitHub Releases
 - [ ] README install instructions: download binary for your platform, run `bible-mcp setup`
+- [ ] `setup` bundles / downloads correct `onnxruntime` shared lib per platform
 
 ---
 
@@ -278,7 +290,10 @@ tokio        = { version = "1", features = ["full"] }
 rmcp         = { version = "0.1", features = ["server", "transport-io"] }
 rusqlite     = { version = "0.31", features = ["bundled"] }
 sqlite-vec   = "0.1"
-fastembed    = "3"
+# fastembed v5 + ort-load-dynamic: loads onnxruntime.dll at runtime so the
+# binary can be built on any host (including Windows GNU) without linking
+# against MSVC-only ONNX Runtime static libs.
+fastembed    = { version = "5", features = ["ort-load-dynamic"] }
 reqwest      = { version = "0.12", features = ["stream"] }
 serde        = { version = "1", features = ["derive"] }
 serde_json   = "1"

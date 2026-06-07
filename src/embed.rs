@@ -18,7 +18,9 @@ fn model() -> Result<&'static Mutex<TextEmbedding>> {
 /// Embed a single query string and return a `Vec<f32>` of length 768.
 pub fn embed_query(text: &str) -> Result<Vec<f32>> {
     let mutex = model()?;
-    let mut m = mutex.lock().map_err(|_| anyhow::anyhow!("embed model mutex poisoned"))?;
+    let mut m = mutex
+        .lock()
+        .map_err(|_| anyhow::anyhow!("embed model mutex poisoned"))?;
     let mut results = m.embed(vec![text.to_string()], None)?;
     Ok(results.remove(0))
 }

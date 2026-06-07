@@ -25,8 +25,7 @@ pub fn init_sqlite_vec() {
 }
 
 fn open(db_path: &Path) -> Result<Connection> {
-    Connection::open(db_path)
-        .with_context(|| format!("opening database at {}", db_path.display()))
+    Connection::open(db_path).with_context(|| format!("opening database at {}", db_path.display()))
 }
 
 fn floats_to_blob(floats: &[f32]) -> Vec<u8> {
@@ -39,7 +38,11 @@ fn blob_to_floats(blob: &[u8]) -> Vec<f32> {
         .collect()
 }
 
-fn collect_id_score(conn: &Connection, sql: &str, p: impl rusqlite::Params) -> Result<Vec<(i64, f64)>> {
+fn collect_id_score(
+    conn: &Connection,
+    sql: &str,
+    p: impl rusqlite::Params,
+) -> Result<Vec<(i64, f64)>> {
     let mut stmt = conn.prepare(sql)?;
     let mut out = Vec::new();
     let mut rows = stmt.query(p)?;
@@ -71,10 +74,7 @@ fn collect_verses(conn: &Connection, sql: &str, p: impl rusqlite::Params) -> Res
 // ---------------------------------------------------------------------------
 
 /// Merge two ranked lists via Reciprocal Rank Fusion (k=60).
-pub fn rrf_merge(
-    vector_hits: &[(i64, f64)],
-    fts_hits: &[(i64, f64)],
-) -> Vec<(i64, f64)> {
+pub fn rrf_merge(vector_hits: &[(i64, f64)], fts_hits: &[(i64, f64)]) -> Vec<(i64, f64)> {
     const K: f64 = 60.0;
     let mut scores: HashMap<i64, f64> = HashMap::new();
     for (rank, &(id, _)) in vector_hits.iter().enumerate() {
@@ -308,7 +308,11 @@ pub async fn get_passage_by_ref(
     ))
 }
 
-pub async fn get_cross_refs(db_path: PathBuf, verse_id: i64, limit: usize) -> Result<Vec<(i64, f64)>> {
+pub async fn get_cross_refs(
+    db_path: PathBuf,
+    verse_id: i64,
+    limit: usize,
+) -> Result<Vec<(i64, f64)>> {
     blocking!(get_cross_refs_sync(&db_path, verse_id, limit))
 }
 

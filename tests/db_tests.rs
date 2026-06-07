@@ -1,5 +1,5 @@
-use bible_mcp::db::{self,
-    fts_search_sync, get_passage_by_ref_sync, get_verse_by_ref_sync, get_verses_by_ids_sync,
+use bible_mcp::db::{
+    self, fts_search_sync, get_passage_by_ref_sync, get_verse_by_ref_sync, get_verses_by_ids_sync,
     rrf_merge, vector_search_sync,
 };
 use rusqlite::Connection;
@@ -46,16 +46,49 @@ fn seed_db() -> NamedTempFile {
     ).unwrap();
 
     // tiny 4-dim fake embeddings so we can test KNN
-    let e1: Vec<u8> = [1.0f32, 0.0, 0.0, 0.0].iter().flat_map(|f: &f32| f.to_le_bytes()).collect();
-    let e2: Vec<u8> = [0.0f32, 1.0, 0.0, 0.0].iter().flat_map(|f: &f32| f.to_le_bytes()).collect();
-    let e3: Vec<u8> = [0.9f32, 0.1, 0.0, 0.0].iter().flat_map(|f: &f32| f.to_le_bytes()).collect();
-    conn.execute("INSERT INTO verse_embeddings (rowid, embedding) VALUES (1, ?1)", rusqlite::params![e1]).unwrap();
-    conn.execute("INSERT INTO verse_embeddings (rowid, embedding) VALUES (2, ?1)", rusqlite::params![e2]).unwrap();
-    conn.execute("INSERT INTO verse_embeddings (rowid, embedding) VALUES (3, ?1)", rusqlite::params![e3]).unwrap();
+    let e1: Vec<u8> = [1.0f32, 0.0, 0.0, 0.0]
+        .iter()
+        .flat_map(|f: &f32| f.to_le_bytes())
+        .collect();
+    let e2: Vec<u8> = [0.0f32, 1.0, 0.0, 0.0]
+        .iter()
+        .flat_map(|f: &f32| f.to_le_bytes())
+        .collect();
+    let e3: Vec<u8> = [0.9f32, 0.1, 0.0, 0.0]
+        .iter()
+        .flat_map(|f: &f32| f.to_le_bytes())
+        .collect();
+    conn.execute(
+        "INSERT INTO verse_embeddings (rowid, embedding) VALUES (1, ?1)",
+        rusqlite::params![e1],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO verse_embeddings (rowid, embedding) VALUES (2, ?1)",
+        rusqlite::params![e2],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO verse_embeddings (rowid, embedding) VALUES (3, ?1)",
+        rusqlite::params![e3],
+    )
+    .unwrap();
 
-    conn.execute("INSERT INTO verses_fts(rowid, text) VALUES (1, 'For God so loved the world')", []).unwrap();
-    conn.execute("INSERT INTO verses_fts(rowid, text) VALUES (2, 'All things work together for good')", []).unwrap();
-    conn.execute("INSERT INTO verses_fts(rowid, text) VALUES (3, 'For God sent his Son')", []).unwrap();
+    conn.execute(
+        "INSERT INTO verses_fts(rowid, text) VALUES (1, 'For God so loved the world')",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO verses_fts(rowid, text) VALUES (2, 'All things work together for good')",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO verses_fts(rowid, text) VALUES (3, 'For God sent his Son')",
+        [],
+    )
+    .unwrap();
 
     file
 }
@@ -92,7 +125,9 @@ fn vector_search_returns_hits() {
 #[test]
 fn get_verse_by_ref_found() {
     let db = seed_db();
-    let v = get_verse_by_ref_sync(db.path(), 43, 3, 16).unwrap().unwrap();
+    let v = get_verse_by_ref_sync(db.path(), 43, 3, 16)
+        .unwrap()
+        .unwrap();
     assert_eq!(v.book, "John");
     assert!(v.text.contains("loved"));
 }

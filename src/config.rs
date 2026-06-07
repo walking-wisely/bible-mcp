@@ -57,7 +57,9 @@ mod tests {
     fn round_trip() {
         let dir = tempdir().unwrap();
         let db_path = dir.path().join("bible.db");
-        let cfg = Config { db_path: db_path.clone() };
+        let cfg = Config {
+            db_path: db_path.clone(),
+        };
         let json = serde_json::to_string(&cfg).unwrap();
         let loaded: Config = serde_json::from_str(&json).unwrap();
         assert_eq!(loaded.db_path, db_path);

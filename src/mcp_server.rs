@@ -97,7 +97,9 @@ fn anyhow_to_mcp(e: anyhow::Error) -> McpError {
 
 #[tool(tool_box)]
 impl BibleServer {
-    #[tool(description = "Hybrid semantic + keyword search over all ~31K Bible verses (World English Bible). Returns the most relevant verses for a topic, theme, concept, or phrase. Optionally filter by book.")]
+    #[tool(
+        description = "Hybrid semantic + keyword search over all ~31K Bible verses (World English Bible). Returns the most relevant verses for a topic, theme, concept, or phrase. Optionally filter by book."
+    )]
     async fn search_verses(
         &self,
         #[tool(aggr)] args: SearchVersesArgs,
@@ -120,15 +122,9 @@ impl BibleServer {
         .map_err(|e| McpError::internal_error(e.to_string(), None))?
         .map_err(anyhow_to_mcp)?;
 
-        let hits = db::hybrid_search(
-            self.db_path.clone(),
-            embedding,
-            args.query,
-            limit,
-            book_num,
-        )
-        .await
-        .map_err(anyhow_to_mcp)?;
+        let hits = db::hybrid_search(self.db_path.clone(), embedding, args.query, limit, book_num)
+            .await
+            .map_err(anyhow_to_mcp)?;
 
         let ids: Vec<i64> = hits.iter().map(|&(id, _)| id).collect();
         let score_map: std::collections::HashMap<i64, f64> = hits.into_iter().collect();
@@ -143,7 +139,9 @@ impl BibleServer {
         ok_json(results)
     }
 
-    #[tool(description = "Find verses similar to a given verse. Uses human-curated cross-references first, then vector similarity to fill remaining slots. Surfaces theologically intentional connections, not just word overlap.")]
+    #[tool(
+        description = "Find verses similar to a given verse. Uses human-curated cross-references first, then vector similarity to fill remaining slots. Surfaces theologically intentional connections, not just word overlap."
+    )]
     async fn similar_verses(
         &self,
         #[tool(aggr)] args: SimilarVersesArgs,
@@ -155,10 +153,9 @@ impl BibleServer {
             Err(e) => return err_json(e),
         };
 
-        let src =
-            db::get_verse_by_ref(self.db_path.clone(), book_num, args.chapter, args.verse)
-                .await
-                .map_err(anyhow_to_mcp)?;
+        let src = db::get_verse_by_ref(self.db_path.clone(), book_num, args.chapter, args.verse)
+            .await
+            .map_err(anyhow_to_mcp)?;
         let src = match src {
             Some(v) => v,
             None => {
@@ -182,12 +179,14 @@ impl BibleServer {
                 .await
                 .map_err(anyhow_to_mcp)?
             {
-                let vec_hits =
-                    db::vector_search(self.db_path.clone(), emb, limit + 1, None)
-                        .await
-                        .map_err(anyhow_to_mcp)?;
-                let seen: std::collections::HashSet<i64> =
-                    xref_ids.iter().copied().chain(std::iter::once(src.id)).collect();
+                let vec_hits = db::vector_search(self.db_path.clone(), emb, limit + 1, None)
+                    .await
+                    .map_err(anyhow_to_mcp)?;
+                let seen: std::collections::HashSet<i64> = xref_ids
+                    .iter()
+                    .copied()
+                    .chain(std::iter::once(src.id))
+                    .collect();
                 vec_ids = vec_hits
                     .into_iter()
                     .map(|(id, _)| id)

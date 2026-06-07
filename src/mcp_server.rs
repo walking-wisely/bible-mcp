@@ -43,7 +43,9 @@ pub struct GetVerseArgs {
 pub struct GetPassageArgs {
     pub book: String,
     pub chapter: u32,
+    #[serde(rename = "fromVerse")]
     pub from_verse: u32,
+    #[serde(rename = "toVerse")]
     pub to_verse: u32,
 }
 
@@ -52,7 +54,7 @@ fn default_limit() -> u32 {
 }
 
 fn clamp_limit(n: u32) -> usize {
-    n.clamp(1, 20) as usize
+    n.clamp(1, 50) as usize
 }
 
 #[derive(Serialize)]

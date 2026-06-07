@@ -17,12 +17,26 @@ fn model() -> Result<&'static Mutex<TextEmbedding>> {
 
 /// Embed a single query string and return a `Vec<f32>` of length 768.
 pub fn embed_query(text: &str) -> Result<Vec<f32>> {
+    if let Some(override_embedding) = std::env::var_os("BIBLE_MCP_TEST_EMBEDDING") {
+        return parse_override_embedding(&override_embedding.to_string_lossy());
+    }
     let mutex = model()?;
     let mut m = mutex
         .lock()
         .map_err(|_| anyhow::anyhow!("embed model mutex poisoned"))?;
     let mut results = m.embed(vec![text.to_string()], None)?;
     Ok(results.remove(0))
+}
+
+fn parse_override_embedding(value: &str) -> Result<Vec<f32>> {
+    value
+        .split(',')
+        .map(|part| {
+            part.trim()
+                .parse::<f32>()
+                .with_context(|| format!("invalid test embedding value: {part}"))
+        })
+        .collect()
 }
 
 #[cfg(test)]

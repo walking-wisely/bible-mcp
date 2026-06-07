@@ -23,6 +23,9 @@ fn config_file() -> PathBuf {
 }
 
 pub fn default_db_path() -> PathBuf {
+    if let Some(path) = std::env::var_os("BIBLE_MCP_DB_PATH") {
+        return PathBuf::from(path);
+    }
     dirs::data_local_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("bible-mcp")

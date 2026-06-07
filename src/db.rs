@@ -102,16 +102,21 @@ pub fn vector_search_sync(
     let blob = floats_to_blob(embedding);
     let lim = limit as i64;
     if let Some(bnum) = book_num {
+        let k = (limit.max(1) * 20) as i64;
         collect_id_score(
             &conn,
-            "SELECT ve.rowid, ve.distance
-             FROM verse_embeddings ve
-             JOIN verses v ON v.id = ve.rowid
-             WHERE v.book_num = ?1
-               AND ve.embedding MATCH ?2
-             ORDER BY ve.distance
-             LIMIT ?3",
-            params![bnum, blob, lim],
+            "SELECT candidate.rowid, candidate.distance
+             FROM (
+               SELECT rowid, distance
+               FROM verse_embeddings
+               WHERE embedding MATCH ?1
+                 AND k = ?2
+             ) candidate
+             JOIN verses v ON v.id = candidate.rowid
+             WHERE v.book_num = ?3
+             ORDER BY candidate.distance
+             LIMIT ?4",
+            params![blob, k, bnum, lim],
         )
     } else {
         collect_id_score(

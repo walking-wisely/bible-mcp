@@ -2,44 +2,51 @@
 
 > Jesus is King.
 
-An MCP (Model Context Protocol) server that gives AI-driven applications like Claude Code and Codex semantic search over the Bible. Ask a question, get the most relevant verses back — powered by local embeddings and SQLite.
+A self-contained MCP (Model Context Protocol) server that gives AI tools like Claude Code semantic search over the entire Bible. No external runtime dependencies — just download one binary and run `bible-mcp setup`.
 
 ## How it works
 
-1. On first launch the app downloads a pre-built SQLite database (~50 MB) containing all ~31K World English Bible verses and their vector embeddings.
-2. When an AI tool calls `search_verses`, your query is embedded locally via Ollama and a cosine similarity search is run against the database — no internet required after the initial download.
-3. The MCP server runs as a background process managed by the Tauri desktop app.
+1. `bible-mcp setup` downloads a pre-built SQLite database (~50 MB) with all ~31K World English Bible verses and their vector embeddings, then writes the MCP server entry to your Claude Code config.
+2. When an AI tool calls `search_verses`, your query is embedded locally in-process (via `fastembed` / ONNX) — no Ollama, no internet required after the initial setup.
+3. Claude Code spawns `bible-mcp serve` directly as a stdio MCP process.
 
 ## Features
 
-- Semantic verse search (`search_verses`)
-- Direct verse lookup (`get_verse`)
-- Passage retrieval (`get_passage`)
-- Model selector — choose any Ollama embedding model installed on your machine
+- Hybrid semantic + keyword search (`search_verses`) via vector KNN + FTS5 BM25, merged with Reciprocal Rank Fusion
+- Theologically-aware similar verse lookup (`similar_verses`) — curated cross-references first, vector similarity to fill gaps
+- Direct verse lookup (`get_verse`) and passage retrieval (`get_passage`)
+- Fuzzy book name matching — "Gen", "First Kings", "1st Cor" all resolve correctly
 - Pre-built WEB (World English Bible) database, freely distributable
-- Tiny installer (~8 MB), database downloaded once and cached locally
+- Single binary, no Python/Node/Ollama required
 
 ## Requirements
 
-- [Ollama](https://ollama.com) running locally with at least one embedding model pulled (e.g. `ollama pull nomic-embed-text`)
+None. Download the binary for your platform and run it.
+
+On first run, `bible-mcp setup` will download:
+- The Bible database (~50 MB) from Cloudflare R2
+- The `nomic-embed-text` embedding model (~130 MB, cached in `~/.cache/fastembed/`)
+
+Internet access is only needed for this initial setup.
 
 ## Installation
 
-Download the installer for your platform from the [releases page](https://github.com/walking-wisely/holy-blocker/releases).
+Download the binary for your platform from the [releases page](https://github.com/walking-wisely/bible-mcp/releases), then:
 
-On first launch the app will:
-1. Check for Ollama
-2. Let you pick an embedding model
-3. Download the Bible database from Cloudflare R2
-4. Write the MCP server entry to your Claude Code config automatically
+```sh
+bible-mcp setup
+```
+
+That's it. Restart Claude Code and the `bible` MCP server will be active.
 
 ## MCP tools
 
 | Tool | Description |
-|---|---|
-| `search_verses(query, limit?)` | Semantic search — returns the most relevant verses |
+| --- | --- |
+| `search_verses(query, limit?, book?)` | Hybrid semantic + keyword search over all ~31K verses |
+| `similar_verses(book, chapter, verse, limit?)` | Find theologically related verses |
 | `get_verse(book, chapter, verse)` | Fetch a single verse by reference |
-| `get_passage(book, chapter, from, to)` | Fetch a range of verses |
+| `get_passage(book, chapter, from_verse, to_verse)` | Fetch a contiguous range of verses |
 
 ## Bible version
 

@@ -2,7 +2,13 @@
 
 ## Overview
 
-A Python CLI tool that manages a local MCP server providing semantic Bible search to AI tools (Claude Code, Codex, etc.). The CLI handles first-run setup (downloading the pre-built database, detecting Ollama, writing the Claude Code MCP config). The MCP server runs as a stdio process — Claude Code spawns it directly.
+A self-contained Rust binary that acts as both a CLI setup tool and an MCP stdio server for semantic Bible search. No external runtime dependencies — embeddings run in-process via `fastembed`, the database is downloaded once from Cloudflare R2. Claude Code (or any MCP host) spawns the binary directly.
+
+---
+
+## Prerequisites (runtime)
+
+None. The binary is self-contained. On first run it downloads the pre-built database (~50 MB) and the embedding model (~130 MB, cached locally). Internet access required for first run only.
 
 ---
 
@@ -10,17 +16,23 @@ A Python CLI tool that manages a local MCP server providing semantic Bible searc
 
 | Layer | Technology |
 |---|---|
-| CLI + MCP server | Python |
-| MCP protocol | `mcp` (official Python MCP SDK) |
-| Async runtime | `asyncio` (stdlib) |
+| CLI + MCP server | Rust (single binary) |
+| MCP protocol | `rmcp` (official Rust MCP SDK) |
+| Async runtime | `tokio` |
 | Vector store | SQLite + `sqlite-vec` |
 | Full-text search | SQLite FTS5 (built-in) |
 | Cross-references | OpenBible.info dataset (~340K curated verse pairs) |
-| Hybrid ranking | Reciprocal Rank Fusion (RRF, implemented in Python) |
-| Embeddings (runtime) | Ollama local HTTP API via `ollama` Python client |
-| Embeddings (pre-built db) | `nomic-embed-text` via Ollama (run once by maintainer) |
+| Hybrid ranking | Reciprocal Rank Fusion (RRF, pure Rust) |
+| Embeddings (runtime) | `fastembed-rs` — runs `nomic-embed-text` in-process via ONNX |
+| Embeddings (pre-built db) | `nomic-embed-text` via Ollama (run once by maintainer, seed script) |
+| Fuzzy matching | `strsim` |
+| HTTP + download | `reqwest` |
+| Config + serialisation | `serde` + `serde_json` |
+| Platform dirs | `dirs` |
+| Progress bars | `indicatif` |
 | Bible data | World English Bible (WEB), public domain |
 | Database hosting | Cloudflare R2 (free tier) |
+| Seed script | Python (offline, maintainer only — not shipped) |
 
 ---
 
@@ -28,23 +40,54 @@ A Python CLI tool that manages a local MCP server providing semantic Bible searc
 
 ```
 bible-mcp/
-├── bible_mcp/
-│   ├── __init__.py
-│   ├── cli.py           # CLI entry point — setup, status, serve commands
-│   ├── mcp_server.py    # MCP stdio server — search_verses, similar_verses, get_verse, get_passage
-│   ├── db.py            # SQLite connection, KNN search, FTS5, RRF merge, cross-ref lookup
-│   ├── books.py         # canonical book name list + fuzzy matching via difflib
-│   ├── download.py      # R2 download, sha256 verify, cache logic
-│   ├── ollama_client.py # list_models(), embed(text, model)
-│   └── config.py        # read/write active model, db path — ~/.config/bible-mcp/config.json
+├── src/
+│   ├── main.rs          # CLI entry point (clap subcommands)
+│   ├── mcp_server.rs    # MCP stdio server — search_verses, similar_verses, get_verse, get_passage
+│   ├── db.rs            # SQLite connection, KNN search, FTS5, RRF merge, cross-ref lookup
+│   ├── books.rs         # canonical book name list + fuzzy matching via strsim
+│   ├── download.rs      # R2 download, sha256 verify, cache logic
+│   ├── embed.rs         # fastembed wrapper — load model, embed query
+│   └── config.rs        # read/write config — ~/.config/bible-mcp/config.json
+├── tests/
+│   ├── db_tests.rs      # integration tests — real in-memory SQLite
+│   ├── books_tests.rs   # unit tests — fuzzy matching, canonical resolution
+│   ├── embed_tests.rs   # integration tests — real model, smoke-test output shape
+│   └── mcp_tests.rs     # integration tests — MCP tool calls end-to-end
 ├── seed/                # one-time offline tooling (not shipped)
 │   ├── seed.py          # fetch WEB JSON → embed → write SQLite → seed cross-refs → upload R2
 │   └── requirements.txt # sentence-transformers, ollama, sqlite-vec, requests, tqdm, boto3
-├── pyproject.toml
+├── Cargo.toml
 ├── README.md
 ├── PLAN.md
 └── LICENSE.md
 ```
+
+---
+
+## Testing approach
+
+All tests follow **AAA** (Arrange / Act / Assert). New behaviour is written test-first (TDD): write the failing test, then the implementation.
+
+### Unit tests (`src/*.rs` inline `#[cfg(test)]`)
+
+Fast, no I/O. Cover pure logic:
+- `books.rs` — fuzzy match returns correct canonical name, handles variants, returns error on no match
+- `db.rs` — RRF merge produces correct ordering given two ranked lists
+- `config.rs` — round-trip serialisation, defaults applied correctly
+
+### Integration tests (`tests/`)
+
+Allowed to do I/O, but use fixtures not production data:
+- `db_tests.rs` — spin up in-memory SQLite, insert a handful of verses + embeddings, assert KNN and FTS5 results are correct
+- `books_tests.rs` — exhaustive variant table (`"Gen"`, `"First Kings"`, `"1st Kings"`, etc.)
+- `embed_tests.rs` — load real model, embed a short string, assert output is a `Vec<f32>` of length 768
+- `mcp_tests.rs` — drive the MCP server over stdin/stdout with a real (test) database, assert tool responses match expected JSON shape
+
+### What is not tested
+
+- The seed script (Python, one-off, maintainer-only)
+- Ollama (not used at runtime)
+- Network download (mocked at the `reqwest` boundary)
 
 ---
 
@@ -104,7 +147,7 @@ Format: `From verse TAB To verse TAB Votes` (votes normalised to 0–1 weight).
 
 ---
 
-### Phase 2 — MCP server (`bible_mcp/mcp_server.py`)
+### Phase 2 — MCP server (`src/mcp_server.rs`)
 
 #### Tools exposed
 
@@ -126,7 +169,7 @@ The `book` field always reflects the resolved canonical name, so the model self-
 
 #### `search_verses` — hybrid retrieval
 
-1. Embed `query` via Ollama (`nomic-embed-text`)
+1. Embed `query` via `fastembed` (`nomic-embed-text`, in-process)
 2. Run KNN vector search → ranked list
 3. Run FTS5 BM25 search over `verses_fts` → ranked list
 4. Merge with **Reciprocal Rank Fusion**: `score = 1 / (rank + 60)`, summed across both systems
@@ -147,36 +190,36 @@ This makes `similar_verses` meaningfully different from a second `search_verses`
 
 Simple `SELECT` by `(book_num, chapter, verse)` with fuzzy book matching. No scoring.
 
-#### Book name fuzzy matching (`bible_mcp/books.py`)
+#### Book name fuzzy matching (`src/books.rs`)
 
 - 66 canonical names (e.g. `"1 Kings"`, `"Song of Solomon"`)
-- `difflib.get_close_matches(book, canonical_names, n=1, cutoff=0.6)`
+- `strsim::jaro_winkler` across all candidates, take best match above threshold
 - On no match: `"Unknown book: '{book}'. Try a standard Bible book name."`
 - Resolved canonical name always echoed in response
 
 #### Implementation details
 
-- [ ] Set up `mcp` Python SDK with stdio transport
-- [ ] `db.py` — async-friendly SQLite wrapper using `asyncio.to_thread` for all blocking calls
-- [ ] `ollama_client.py` — `list_models()` and `embed(text, model)` via `ollama` Python client
-- [ ] RRF merge in pure Python
-- [ ] Cross-ref + vector merge logic in `db.py`
+- [ ] Wire `rmcp` with stdio transport, register four tools
+- [ ] `db.rs` — async SQLite via `tokio::task::spawn_blocking` for all blocking calls
+- [ ] `embed.rs` — lazy-init `fastembed::TextEmbedding`, download model on first call
+- [ ] RRF merge in pure Rust
+- [ ] Cross-ref + vector merge logic in `db.rs`
 - [ ] `get_verse` / `get_passage` — direct lookups by `(book_num, chapter, verse)`
 
 ---
 
-### Phase 3 — CLI (`bible_mcp/cli.py`)
+### Phase 3 — CLI (`src/main.rs`)
 
 | Command | Description |
 |---|---|
-| `bible-mcp setup` | First-run wizard: detect Ollama, download DB, write Claude Code MCP config |
+| `bible-mcp setup` | First-run wizard: download embedding model + DB, write Claude Code MCP config |
 | `bible-mcp serve` | Start the MCP stdio server (what Claude Code invokes) |
-| `bible-mcp status` | Show config, DB path, Ollama status |
+| `bible-mcp status` | Show config, DB path, embedding model cache status |
 | `bible-mcp update` | Re-check manifest and re-download DB if version changed |
 
 **`bible-mcp setup` flow:**
-1. Ping `localhost:11434` — detect Ollama, print link if missing
-2. Download `bible-web-nomic.db` from R2 with progress bar → `~/.local/share/bible-mcp/bible.db`
+1. Download `bible-web-nomic.db` from R2 with progress bar → `~/.local/share/bible-mcp/bible.db`
+2. Trigger `fastembed` model download → `~/.cache/fastembed/` (if not already cached)
 3. Write `~/.config/bible-mcp/config.json`
 4. Write MCP server entry to Claude Code config:
    ```json
@@ -194,49 +237,58 @@ Simple `SELECT` by `(book_num, chapter, verse)` with fuzzy book matching. No sco
 
 ### Phase 4 — Packaging & distribution
 
-- [ ] `pyproject.toml` with `[project.scripts] bible-mcp = "bible_mcp.cli:main"`
-- [ ] Publish to PyPI — users install with `pipx install bible-mcp`
-- [ ] GitHub Actions release workflow — run tests, publish to PyPI on tag
+- [ ] `Cargo.toml` with `[[bin]] name = "bible-mcp"`
+- [ ] GitHub Actions release workflow — cross-compile for `x86_64-unknown-linux-musl`, `x86_64-apple-darwin`, `aarch64-apple-darwin`, `x86_64-pc-windows-msvc` on tag
+- [ ] Upload binaries to GitHub Releases
+- [ ] README install instructions: download binary for your platform, run `bible-mcp setup`
 
 ---
 
 ## Key decisions
 
+**Rust, single binary.** Target users are non-technical. "Download one file, run it" is the only acceptable install story. No Python runtime, no Ollama, no pip.
+
+**`fastembed-rs` instead of Ollama.** `fastembed` runs `nomic-embed-text` in-process via ONNX Runtime. Model downloads automatically to `~/.cache/fastembed/` on first use (~130 MB, quantized). Removes the hardest prerequisite.
+
 **Four tools, complete coverage.** `search_verses` for topic/concept queries, `similar_verses` for "more like this," `get_verse` for a single known reference, `get_passage` for a range. All share fuzzy book matching and the same response shape.
 
 **Hybrid search via RRF.** Vector search drifts on exact phrases and proper nouns; BM25 misses synonyms. RRF merges both ranked lists without ML or weight tuning — `1/(rank+60)` is a robust default.
 
-**`similar_verses` blends cross-refs + vector.** Human-curated cross-references (OpenBible) are high-precision but sparse — not every verse has them. Vector KNN fills the gaps. Cross-ref hits are surfaced first, sorted by confidence weight.
+**`similar_verses` blends cross-refs + vector.** Human-curated cross-references (OpenBible) are high-precision but sparse. Vector KNN fills the gaps. Cross-ref hits are surfaced first, sorted by confidence weight.
 
-**`similar_verses` is not BM25.** BM25 on verse text finds verses sharing words, not meaning. Vector distance and curated cross-refs are both better signals for "feel like this one."
+**Book names are fuzzy-matched.** The model doesn't know canonical forms upfront. `strsim::jaro_winkler` handles "Gen", "Genesis", "First Kings", "1st Kings". Resolved name echoed back for self-correction.
 
-**Book names are fuzzy-matched.** The model doesn't know canonical forms upfront. `difflib` handles "Gen", "Genesis", "First Kings", "1st Kings". Resolved name echoed back for self-correction.
-
-**Human-readable API contract.** All tools take `(book, chapter, verse)` not opaque ids. References survive re-seeds; the model can construct calls from any known reference.
+**Human-readable API contract.** All tools take `(book, chapter, verse)` not opaque ids. References survive re-seeds.
 
 **Embedding model fixed at seed time (`nomic-embed-text`).** Query-time embeddings must match. v1 always uses `nomic-embed-text`.
 
 **Database downloaded, not bundled.** Cached at `~/.local/share/bible-mcp/bible.db`, version-checked on `setup`/`update`.
 
-**`asyncio.to_thread` for SQLite.** All blocking DB calls run in a thread pool.
+**Seed script stays Python.** It runs once, offline, by the maintainer. No reason to port it.
+
+**TDD + AAA throughout.** Every new behaviour gets a failing test first. Tests are the executable specification.
 
 ---
 
-## Python dependencies (`pyproject.toml`)
+## Rust dependencies (`Cargo.toml`)
 
 ```toml
-[project]
-dependencies = [
-  "mcp>=1.0",
-  "ollama>=0.3",
-  "sqlite-vec>=0.1",
-  "httpx>=0.27",
-  "click>=8.0",
-  "tqdm>=4.0",
-]
+[dependencies]
+tokio        = { version = "1", features = ["full"] }
+rmcp         = { version = "0.1", features = ["server", "transport-io"] }
+rusqlite     = { version = "0.31", features = ["bundled"] }
+sqlite-vec   = "0.1"
+fastembed    = "3"
+reqwest      = { version = "0.12", features = ["stream"] }
+serde        = { version = "1", features = ["derive"] }
+serde_json   = "1"
+clap         = { version = "4", features = ["derive"] }
+indicatif    = "0.17"
+strsim       = "0.11"
+dirs         = "5"
+sha2         = "0.10"
+anyhow       = "1"
 ```
-
-`difflib` is stdlib — no extra dependency for fuzzy book matching.
 
 ---
 

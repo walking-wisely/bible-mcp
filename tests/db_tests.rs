@@ -362,34 +362,27 @@ fn get_verse_embedding_not_found() {
 }
 
 #[test]
-fn get_verse_embedding_truncated_blob_documents_behavior() {
-    // blob_to_floats uses chunks_exact(4) — trailing bytes silently dropped.
-    // This test documents current behavior; a truncated blob is a data bug.
-    // TODO: consider returning Err instead of silently truncating.
+fn vec0_rejects_dimension_mismatched_insert() {
+    // vec0 validates embedding dimension at write time — a 3-float blob into a
+    // float[4] column must Err. blob_to_floats truncation is only reachable
+    // if the database is externally corrupted (vec0 guards the write path).
+    // TODO: if that truncation path ever becomes reachable, return Err instead of silently dropping bytes.
     db::init_sqlite_vec();
     let dir = TempDir::new().unwrap();
     let path = dir.path().join("trunc.db");
     let conn = Connection::open(&path).unwrap();
     conn.execute_batch(&format!(
-        "CREATE VIRTUAL TABLE verse_embeddings USING vec0(embedding float[{TEST_DIM}]);
-         CREATE TABLE verses (id INTEGER PRIMARY KEY, book TEXT NOT NULL,
-             book_num INTEGER NOT NULL, chapter INTEGER NOT NULL,
-             verse INTEGER NOT NULL, text TEXT NOT NULL);",
+        "CREATE VIRTUAL TABLE verse_embeddings USING vec0(embedding float[{TEST_DIM}]);",
         TEST_DIM = TEST_DIM
     ))
     .unwrap();
-    // Insert a 3-byte blob (not multiple of 4) directly; bypasses vec0 type check
-    // so we use a raw sqlite table instead
-    let conn2 = Connection::open(&path).unwrap();
-    conn2
-        .execute_batch(
-            "CREATE TABLE raw_embed (rowid INTEGER, embedding BLOB);
-             INSERT INTO raw_embed VALUES (1, X'010203');",
-        )
-        .unwrap();
-    // We can't easily inject a bad blob into verse_embeddings (vec0 validates on insert).
-    // Document: vec0 itself rejects dimension-mismatched inserts at write time.
-    // blob_to_floats truncation path is therefore only reachable if db is corrupted externally.
+    // 3-float blob (12 bytes) instead of 4-float (16 bytes)
+    let bad_blob: Vec<u8> = floats_to_blob(&[1.0f32, 0.0, 0.0]);
+    let result = conn.execute(
+        "INSERT INTO verse_embeddings (rowid, embedding) VALUES (1, ?1)",
+        rusqlite::params![bad_blob],
+    );
+    assert!(result.is_err(), "vec0 must reject wrong-dimension embedding");
 }
 
 // ---------------------------------------------------------------------------
@@ -399,13 +392,10 @@ fn get_verse_embedding_truncated_blob_documents_behavior() {
 #[test]
 fn open_bad_path_returns_err() {
     db::init_sqlite_vec();
-    // nonexistent directory — rusqlite will error
-    let result = vector_search_sync(
-        std::path::Path::new("/nonexistent/path/to/db.sqlite"),
-        &[1.0f32, 0.0, 0.0, 0.0],
-        5,
-        None,
-    );
+    // Path inside a non-existent subdirectory — portable across all OSes
+    let dir = TempDir::new().unwrap();
+    let missing = dir.path().join("no_such_dir").join("db.sqlite");
+    let result = vector_search_sync(&missing, &[1.0f32, 0.0, 0.0, 0.0], 5, None);
     assert!(result.is_err());
 }
 

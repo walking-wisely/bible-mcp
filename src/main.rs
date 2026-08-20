@@ -23,6 +23,14 @@ enum Command {
     Status,
     /// Re-check the manifest and update the database if a new version exists
     Update,
+    /// Run one or more embeddings and print per-call timing, for load testing
+    BenchEmbed {
+        #[arg(default_value = "In the beginning God created the heavens and the earth")]
+        text: String,
+        /// Number of concurrent embed calls to run within this process
+        #[arg(short, long, default_value_t = 1)]
+        concurrency: usize,
+    },
 }
 
 #[tokio::main]
@@ -34,6 +42,7 @@ async fn main() -> Result<()> {
         Command::Serve => cmd_serve().await,
         Command::Status => cmd_status(),
         Command::Update => cmd_update().await,
+        Command::BenchEmbed { text, concurrency } => cmd_bench_embed(text, concurrency).await,
     }
 }
 
@@ -109,6 +118,27 @@ async fn cmd_update() -> Result<()> {
         println!("Update complete.");
     } else {
         println!("Database is up to date (version {}).", manifest.version);
+    }
+    Ok(())
+}
+
+async fn cmd_bench_embed(text: String, concurrency: usize) -> Result<()> {
+    let mut set = tokio::task::JoinSet::new();
+    for _ in 0..concurrency.max(1) {
+        let text = text.clone();
+        set.spawn(async move {
+            let start = std::time::Instant::now();
+            let result = tokio::task::spawn_blocking(move || embed::embed_query(&text))
+                .await
+                .map_err(|e| anyhow::anyhow!("join: {}", e))
+                .and_then(|r| r);
+            (start.elapsed(), result)
+        });
+    }
+    while let Some(joined) = set.join_next().await {
+        let (elapsed, embed_result) = joined.map_err(|e| anyhow::anyhow!("join: {}", e))?;
+        let embedding = embed_result?;
+        println!("{:.1} {}", elapsed.as_secs_f64() * 1000.0, embedding.len());
     }
     Ok(())
 }

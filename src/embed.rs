@@ -1,5 +1,9 @@
 use anyhow::{Context, Result};
-use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
+use fastembed::{
+    EmbeddingModel, InitOptions, InitOptionsUserDefined, TextEmbedding, TokenizerFiles,
+    UserDefinedEmbeddingModel,
+};
+use std::path::Path;
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
@@ -16,11 +20,37 @@ fn model() -> Result<&'static Mutex<TextEmbedding>> {
     if let Some(m) = MODEL.get() {
         return Ok(m);
     }
-    let m = TextEmbedding::try_new(
-        InitOptions::new(EmbeddingModel::NomicEmbedTextV15).with_show_download_progress(true),
-    )
-    .context("failed to load fastembed nomic-embed-text model")?;
+    // fastembed's default path (hf-hub download, then ort dlopen-searching for a
+    // system ONNX Runtime library) has been observed to hang indefinitely on more
+    // than one host, with no timeout anywhere in that call chain. BIBLE_MCP_MODEL_DIR
+    // lets ops point at a pre-fetched model directory (model.onnx, tokenizer.json,
+    // config.json, special_tokens_map.json, tokenizer_config.json) to skip it
+    // entirely; pair with ORT_DYLIB_PATH pointing at an installed onnxruntime lib.
+    let m = match std::env::var_os("BIBLE_MCP_MODEL_DIR") {
+        Some(dir) => load_model_from_dir(Path::new(&dir))?,
+        None => TextEmbedding::try_new(
+            InitOptions::new(EmbeddingModel::NomicEmbedTextV15).with_show_download_progress(true),
+        )
+        .context("failed to load fastembed nomic-embed-text model")?,
+    };
     Ok(MODEL.get_or_init(|| Mutex::new(m)))
+}
+
+fn load_model_from_dir(dir: &Path) -> Result<TextEmbedding> {
+    let read = |name: &str| -> Result<Vec<u8>> {
+        std::fs::read(dir.join(name)).with_context(|| format!("reading {name} from {dir:?}"))
+    };
+    let user_model = UserDefinedEmbeddingModel::new(
+        read("model.onnx")?,
+        TokenizerFiles {
+            tokenizer_file: read("tokenizer.json")?,
+            config_file: read("config.json")?,
+            special_tokens_map_file: read("special_tokens_map.json")?,
+            tokenizer_config_file: read("tokenizer_config.json")?,
+        },
+    );
+    TextEmbedding::try_new_from_user_defined(user_model, InitOptionsUserDefined::default())
+        .with_context(|| format!("loading embedding model from {dir:?}"))
 }
 
 /// Embed a single query string and return a `Vec<f32>` of length 768.

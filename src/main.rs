@@ -47,9 +47,7 @@ async fn cmd_setup() -> Result<()> {
     download::ensure_db(&db_path).await?;
 
     println!("Pre-loading embedding model (this may take a minute on first run)...");
-    tokio::task::spawn_blocking(|| embed::embed_query("warm up"))
-        .await
-        .map_err(|e| anyhow::anyhow!("join: {}", e))??;
+    embed::embed_query_async("warm up").await?;
 
     config::save(&cfg)?;
     let config_path = write_mcp_config()?;

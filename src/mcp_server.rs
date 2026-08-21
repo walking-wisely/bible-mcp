@@ -116,13 +116,9 @@ impl BibleServer {
             None => None,
         };
 
-        let embedding = tokio::task::spawn_blocking({
-            let q = args.query.clone();
-            move || embed::embed_query(&q)
-        })
-        .await
-        .map_err(|e| McpError::internal_error(e.to_string(), None))?
-        .map_err(anyhow_to_mcp)?;
+        let embedding = embed::embed_query_async(&args.query)
+            .await
+            .map_err(anyhow_to_mcp)?;
 
         let hits = db::hybrid_search(self.db_path.clone(), embedding, args.query, limit, book_num)
             .await

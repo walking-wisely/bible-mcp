@@ -1,8 +1,16 @@
 use anyhow::{Context, Result};
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use std::sync::{Mutex, OnceLock};
+use std::time::Duration;
 
 static MODEL: OnceLock<Mutex<TextEmbedding>> = OnceLock::new();
+
+// First call may need to download the model (~500 MB) over a network with no
+// guarantee of a working timeout of its own, so it gets a generous ceiling.
+// Once loaded, embedding a single query is a fixed-size ONNX forward pass and
+// should never take anywhere near this long.
+const MODEL_INIT_TIMEOUT: Duration = Duration::from_secs(300);
+const EMBED_TIMEOUT: Duration = Duration::from_secs(30);
 
 fn model() -> Result<&'static Mutex<TextEmbedding>> {
     if let Some(m) = MODEL.get() {
@@ -26,6 +34,27 @@ pub fn embed_query(text: &str) -> Result<Vec<f32>> {
         .map_err(|_| anyhow::anyhow!("embed model mutex poisoned"))?;
     let mut results = m.embed(vec![text.to_string()], None)?;
     Ok(results.remove(0))
+}
+
+/// Embed a query on a blocking thread, bounded by a timeout so a stuck model
+/// load or a hung download can't wedge the caller forever. On timeout the
+/// blocking thread itself keeps running to completion in the background
+/// (Tokio has no way to cancel it) — this only stops the caller from waiting
+/// on it, it doesn't free the thread.
+pub async fn embed_query_async(text: &str) -> Result<Vec<f32>> {
+    let timeout = if MODEL.get().is_some() {
+        EMBED_TIMEOUT
+    } else {
+        MODEL_INIT_TIMEOUT
+    };
+    let text = text.to_string();
+    tokio::time::timeout(
+        timeout,
+        tokio::task::spawn_blocking(move || embed_query(&text)),
+    )
+    .await
+    .map_err(|_| anyhow::anyhow!("embedding timed out after {timeout:?}"))?
+    .context("embed task panicked")?
 }
 
 fn parse_override_embedding(value: &str) -> Result<Vec<f32>> {

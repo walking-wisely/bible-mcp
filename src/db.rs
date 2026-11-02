@@ -27,7 +27,8 @@ pub fn init_sqlite_vec() {
     }
 }
 
-const MMAP_BYTES: i64 = 1 << 30;
+// Windows refuses to overwrite a memory-mapped file, which would block `update` while `serve` runs.
+const MMAP_BYTES: i64 = if cfg!(windows) { 0 } else { 1 << 30 };
 
 pub(crate) type Fingerprint = (u64, Option<SystemTime>);
 

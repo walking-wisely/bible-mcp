@@ -127,9 +127,7 @@ fn cmd_status() -> Result<()> {
         "Database exists: {}",
         if cfg.db_path.exists() { "yes" } else { "no" }
     );
-    let cache = dirs::cache_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("fastembed");
+    let cache = embed::model_cache_dir();
     println!("Embedding cache: {}", cache.display());
     println!(
         "Embedding cached: {}",
@@ -191,7 +189,10 @@ fn write_mcp_config() -> Result<Option<PathBuf>> {
         "{}".to_string()
     };
 
-    let merged = merge_mcp_config(&existing)?;
+    let command = std::env::current_exe()
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| "bible-mcp".to_string());
+    let merged = merge_mcp_config(&existing, &command)?;
     std::fs::write(&path, serde_json::to_string_pretty(&merged)?)?;
     Ok(Some(path))
 }
@@ -200,7 +201,7 @@ fn claude_config_path() -> Option<PathBuf> {
     dirs::config_dir().map(|d| d.join("Claude").join("claude_desktop_config.json"))
 }
 
-fn merge_mcp_config(existing: &str) -> Result<serde_json::Value> {
+fn merge_mcp_config(existing: &str, command: &str) -> Result<serde_json::Value> {
     let mut root = if existing.trim().is_empty() {
         json!({})
     } else {
@@ -212,7 +213,7 @@ fn merge_mcp_config(existing: &str) -> Result<serde_json::Value> {
     }
 
     let server_entry = json!({
-        "command": "bible-mcp",
+        "command": command,
         "args": ["serve"]
     });
 
@@ -237,7 +238,7 @@ mod tests {
 
     #[test]
     fn merge_mcp_config_adds_server_to_empty_object() {
-        let merged = merge_mcp_config("{}").unwrap();
+        let merged = merge_mcp_config("{}", "bible-mcp").unwrap();
         assert_eq!(merged["mcpServers"]["bible"]["command"], "bible-mcp");
         assert_eq!(merged["mcpServers"]["bible"]["args"], json!(["serve"]));
     }
@@ -246,6 +247,7 @@ mod tests {
     fn merge_mcp_config_preserves_other_servers() {
         let merged = merge_mcp_config(
             r#"{"mcpServers":{"other":{"command":"demo","args":["serve"]}},"theme":"dark"}"#,
+            "bible-mcp",
         )
         .unwrap();
 

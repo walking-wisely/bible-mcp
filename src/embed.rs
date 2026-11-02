@@ -3,7 +3,7 @@ use fastembed::{
     EmbeddingModel, InitOptions, InitOptionsUserDefined, TextEmbedding, TokenizerFiles,
     UserDefinedEmbeddingModel,
 };
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
@@ -15,6 +15,13 @@ static MODEL: OnceLock<Mutex<TextEmbedding>> = OnceLock::new();
 // should never take anywhere near this long.
 const MODEL_INIT_TIMEOUT: Duration = Duration::from_secs(300);
 const EMBED_TIMEOUT: Duration = Duration::from_secs(30);
+
+pub fn model_cache_dir() -> PathBuf {
+    dirs::cache_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("bible-mcp")
+        .join("models")
+}
 
 fn model() -> Result<&'static Mutex<TextEmbedding>> {
     if let Some(m) = MODEL.get() {
@@ -30,7 +37,9 @@ fn model() -> Result<&'static Mutex<TextEmbedding>> {
     let m = match std::env::var_os("BIBLE_MCP_MODEL_DIR") {
         Some(dir) => load_model_from_dir(Path::new(&dir))?,
         None => TextEmbedding::try_new(
-            InitOptions::new(EmbeddingModel::NomicEmbedTextV15).with_show_download_progress(true),
+            InitOptions::new(EmbeddingModel::NomicEmbedTextV15)
+                .with_cache_dir(model_cache_dir())
+                .with_show_download_progress(true),
         )
         .context("failed to load fastembed nomic-embed-text model")?,
     };

@@ -64,7 +64,9 @@ async fn cmd_setup() -> Result<()> {
     println!("Setting up bible-mcp...");
     println!("Database will be stored at: {}", db_path.display());
 
-    download::ensure_db(&db_path).await?;
+    if download::ensure_db(&db_path).await? {
+        build_index_after_download(&db_path).await;
+    }
 
     println!("Pre-loading embedding model (this may take a minute on first run)...");
     embed::embed_query_async("warm up").await?;
@@ -100,11 +102,44 @@ async fn cmd_serve_http(bind: std::net::SocketAddr) -> Result<()> {
         "bible-mcp: serving MCP over streamable HTTP at http://{bind}{}",
         bible_mcp::http::MCP_PATH
     );
-    bible_mcp::http::serve(bind, cfg.db_path, async {
-        let _ = tokio::signal::ctrl_c().await;
-    })
-    .await?;
+    bible_mcp::http::serve(bind, cfg.db_path, shutdown_signal()).await?;
     Ok(())
+}
+
+async fn shutdown_signal() {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{signal, SignalKind};
+        match signal(SignalKind::terminate()) {
+            Ok(mut term) => {
+                tokio::select! {
+                    _ = tokio::signal::ctrl_c() => {}
+                    _ = term.recv() => {}
+                }
+            }
+            Err(_) => {
+                let _ = tokio::signal::ctrl_c().await;
+            }
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = tokio::signal::ctrl_c().await;
+    }
+}
+
+async fn build_index_after_download(db_path: &std::path::Path) {
+    println!("Building search index...");
+    let path = db_path.to_path_buf();
+    match tokio::task::spawn_blocking(move || ann::build(&path)).await {
+        Ok(Ok(count)) => println!("Indexed {count} vectors."),
+        Ok(Err(e)) => {
+            eprintln!("Search index not built ({e}); searches will use the slower exact scan.")
+        }
+        Err(e) => {
+            eprintln!("Search index not built ({e}); searches will use the slower exact scan.")
+        }
+    }
 }
 
 fn cmd_build_index() -> Result<()> {
@@ -128,9 +163,7 @@ fn cmd_status() -> Result<()> {
         "Database exists: {}",
         if cfg.db_path.exists() { "yes" } else { "no" }
     );
-    let cache = dirs::cache_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("fastembed");
+    let cache = embed::model_cache_dir();
     println!("Embedding cache: {}", cache.display());
     println!(
         "Embedding cached: {}",
@@ -149,6 +182,7 @@ async fn cmd_update() -> Result<()> {
             manifest.version
         );
         download::download_db(&cfg.db_path, &manifest).await?;
+        build_index_after_download(&cfg.db_path).await;
         println!("Update complete.");
     } else {
         println!("Database is up to date (version {}).", manifest.version);
@@ -192,7 +226,10 @@ fn write_mcp_config() -> Result<Option<PathBuf>> {
         "{}".to_string()
     };
 
-    let merged = merge_mcp_config(&existing)?;
+    let command = std::env::current_exe()
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| "bible-mcp".to_string());
+    let merged = merge_mcp_config(&existing, &command)?;
     std::fs::write(&path, serde_json::to_string_pretty(&merged)?)?;
     Ok(Some(path))
 }
@@ -201,7 +238,7 @@ fn claude_config_path() -> Option<PathBuf> {
     dirs::config_dir().map(|d| d.join("Claude").join("claude_desktop_config.json"))
 }
 
-fn merge_mcp_config(existing: &str) -> Result<serde_json::Value> {
+fn merge_mcp_config(existing: &str, command: &str) -> Result<serde_json::Value> {
     let mut root = if existing.trim().is_empty() {
         json!({})
     } else {
@@ -213,7 +250,7 @@ fn merge_mcp_config(existing: &str) -> Result<serde_json::Value> {
     }
 
     let server_entry = json!({
-        "command": "bible-mcp",
+        "command": command,
         "args": ["serve"]
     });
 
@@ -238,7 +275,7 @@ mod tests {
 
     #[test]
     fn merge_mcp_config_adds_server_to_empty_object() {
-        let merged = merge_mcp_config("{}").unwrap();
+        let merged = merge_mcp_config("{}", "bible-mcp").unwrap();
         assert_eq!(merged["mcpServers"]["bible"]["command"], "bible-mcp");
         assert_eq!(merged["mcpServers"]["bible"]["args"], json!(["serve"]));
     }
@@ -247,6 +284,7 @@ mod tests {
     fn merge_mcp_config_preserves_other_servers() {
         let merged = merge_mcp_config(
             r#"{"mcpServers":{"other":{"command":"demo","args":["serve"]}},"theme":"dark"}"#,
+            "bible-mcp",
         )
         .unwrap();
 

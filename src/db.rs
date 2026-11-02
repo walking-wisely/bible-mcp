@@ -211,12 +211,29 @@ pub fn vector_search_sync(
     }
 }
 
+pub(crate) fn fts_match_expr(query: &str) -> Option<String> {
+    let terms: Vec<String> = query
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|t| !t.is_empty())
+        .map(|t| format!("\"{t}\""))
+        .collect();
+    if terms.is_empty() {
+        None
+    } else {
+        Some(terms.join(" OR "))
+    }
+}
+
 pub fn fts_search_sync(
     db_path: &Path,
     query: &str,
     limit: usize,
     book_num: Option<u32>,
 ) -> Result<Vec<(i64, f64)>> {
+    let Some(query) = fts_match_expr(query) else {
+        return Ok(vec![]);
+    };
+    let query = query.as_str();
     let conn = open(db_path)?;
     let lim = limit as i64;
     let raw: Vec<(i64, f64)> = if let Some(bnum) = book_num {
@@ -431,5 +448,36 @@ mod tests {
         let merged = rrf_merge(&vec_hits, &[]);
         assert_eq!(merged[0].0, 1);
         assert_eq!(merged[1].0, 2);
+    }
+}
+
+#[cfg(test)]
+mod fts_expr_tests {
+    use super::fts_match_expr;
+
+    #[test]
+    fn punctuation_is_stripped_and_words_are_quoted() {
+        assert_eq!(
+            fts_match_expr("God's love?").as_deref(),
+            Some("\"God\" OR \"s\" OR \"love\"")
+        );
+        assert_eq!(
+            fts_match_expr("John 3:16").as_deref(),
+            Some("\"John\" OR \"3\" OR \"16\"")
+        );
+    }
+
+    #[test]
+    fn operators_cannot_escape_quoting() {
+        assert_eq!(
+            fts_match_expr("NOT \"x\" AND (y*)").as_deref(),
+            Some("\"NOT\" OR \"x\" OR \"AND\" OR \"y\"")
+        );
+    }
+
+    #[test]
+    fn empty_or_symbol_only_queries_yield_none() {
+        assert_eq!(fts_match_expr("  ?!  "), None);
+        assert_eq!(fts_match_expr(""), None);
     }
 }

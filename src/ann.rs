@@ -88,7 +88,12 @@ fn load(db_path: &Path, path: &Path, fingerprint: db::Fingerprint) -> Result<Loa
     probe.view(path_str).map_err(|e| anyhow!("{e}"))?;
     let index = Index::new(&options(probe.dimensions())).map_err(|e| anyhow!("{e}"))?;
     drop(probe);
-    index.view(path_str).map_err(|e| anyhow!("{e}"))?;
+    // Windows cannot replace a memory-mapped file, so rebuilding the index would fail while serving.
+    if cfg!(windows) {
+        index.load(path_str).map_err(|e| anyhow!("{e}"))?;
+    } else {
+        index.view(path_str).map_err(|e| anyhow!("{e}"))?;
+    }
     index.change_expansion_search(EXPANSION_SEARCH);
 
     let conn = db::open(db_path)?;

@@ -151,17 +151,26 @@ fn collect_verses(conn: &Connection, sql: &str, p: impl rusqlite::Params) -> Res
 // ---------------------------------------------------------------------------
 
 /// Merge two ranked lists via Reciprocal Rank Fusion (k=60).
-pub fn rrf_merge(vector_hits: &[(i64, f64)], fts_hits: &[(i64, f64)]) -> Vec<(i64, f64)> {
+///
+/// Scores are scaled to 0..=1: 1.0 means first in both lists. Ties keep the
+/// order of first appearance, so entries from `first` win over `second`.
+pub fn rrf_merge(first: &[(i64, f64)], second: &[(i64, f64)]) -> Vec<(i64, f64)> {
     const K: f64 = 60.0;
-    let mut scores: HashMap<i64, f64> = HashMap::new();
-    for (rank, &(id, _)) in vector_hits.iter().enumerate() {
-        *scores.entry(id).or_default() += 1.0 / (rank as f64 + K);
+    let mut merged: Vec<(i64, f64)> = Vec::new();
+    let mut index: HashMap<i64, usize> = HashMap::new();
+    for list in [first, second] {
+        for (rank, &(id, _)) in list.iter().enumerate() {
+            let share = K / (rank as f64 + K) / 2.0;
+            match index.get(&id) {
+                Some(&i) => merged[i].1 += share,
+                None => {
+                    index.insert(id, merged.len());
+                    merged.push((id, share));
+                }
+            }
+        }
     }
-    for (rank, &(id, _)) in fts_hits.iter().enumerate() {
-        *scores.entry(id).or_default() += 1.0 / (rank as f64 + K);
-    }
-    let mut merged: Vec<(i64, f64)> = scores.into_iter().collect();
-    merged.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+    merged.sort_by(|a, b| b.1.total_cmp(&a.1));
     merged
 }
 
@@ -440,6 +449,22 @@ mod tests {
         assert_eq!(merged[0].0, 20);
         assert_eq!(merged[1].0, 10);
         assert_eq!(merged[2].0, 30);
+    }
+
+    #[test]
+    fn rrf_merge_scores_are_scaled_to_one() {
+        let hits = vec![(1i64, 0.0), (2, 0.0)];
+        let both = rrf_merge(&hits, &hits);
+        assert!((both[0].1 - 1.0).abs() < 1e-12);
+        assert!(both[1].1 < both[0].1);
+        let single = rrf_merge(&hits, &[]);
+        assert!((single[0].1 - 0.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn rrf_merge_ties_favour_the_first_list() {
+        let merged = rrf_merge(&[(1i64, 0.0)], &[(2i64, 0.0)]);
+        assert_eq!(merged[0].0, 1);
     }
 
     #[test]

@@ -154,7 +154,7 @@ impl BibleServer {
     }
 
     #[tool(
-        description = "Find verses similar to a given verse. Uses human-curated cross-references first, then vector similarity to fill remaining slots. Surfaces theologically intentional connections, not just word overlap."
+        description = "Find verses similar to a given verse. Combines human-curated cross-references with vector similarity, so verses found both ways rank highest. Surfaces theologically intentional connections, not just word overlap."
     )]
     async fn similar_verses(
         &self,
@@ -183,53 +183,39 @@ impl BibleServer {
         let xrefs = db::get_cross_refs(self.db_path.clone(), src.id, limit)
             .await
             .map_err(anyhow_to_mcp)?;
-        let xref_ids: Vec<i64> = xrefs.iter().map(|&(id, _)| id).collect();
-        let xref_weights: std::collections::HashMap<i64, f64> = xrefs.into_iter().collect();
 
-        let remaining = limit.saturating_sub(xref_ids.len());
-        let mut vec_ids: Vec<i64> = vec![];
-        if remaining > 0 {
-            if let Some(emb) = db::get_verse_embedding(self.db_path.clone(), src.id)
+        let mut vec_hits = vec![];
+        if let Some(emb) = db::get_verse_embedding(self.db_path.clone(), src.id)
+            .await
+            .map_err(anyhow_to_mcp)?
+        {
+            vec_hits = db::vector_search(self.db_path.clone(), emb, limit + 1, None)
                 .await
-                .map_err(anyhow_to_mcp)?
-            {
-                let vec_hits = db::vector_search(self.db_path.clone(), emb, limit + 1, None)
-                    .await
-                    .map_err(anyhow_to_mcp)?;
-                let seen: std::collections::HashSet<i64> = xref_ids
-                    .iter()
-                    .copied()
-                    .chain(std::iter::once(src.id))
-                    .collect();
-                vec_ids = vec_hits
-                    .into_iter()
-                    .map(|(id, _)| id)
-                    .filter(|id| !seen.contains(id))
-                    .take(remaining)
-                    .collect();
-            }
+                .map_err(anyhow_to_mcp)?;
+            vec_hits.retain(|&(id, _)| id != src.id);
         }
 
-        let all_ids: Vec<i64> = xref_ids.iter().chain(vec_ids.iter()).copied().collect();
+        let merged: Vec<(i64, f64)> = db::rrf_merge(&xrefs, &vec_hits)
+            .into_iter()
+            .take(limit)
+            .collect();
+        let ids: Vec<i64> = merged.iter().map(|&(id, _)| id).collect();
         let rows_by_id: std::collections::HashMap<i64, db::Verse> =
-            db::get_verses_by_ids(self.db_path.clone(), all_ids)
+            db::get_verses_by_ids(self.db_path.clone(), ids)
                 .await
                 .map_err(anyhow_to_mcp)?
                 .into_iter()
                 .map(|v| (v.id, v))
                 .collect();
 
-        let mut results: Vec<VerseResult> = vec![];
-        for id in &xref_ids {
-            if let Some(v) = rows_by_id.get(id) {
-                results.push(VerseResult::from_verse(v, xref_weights.get(id).copied()));
-            }
-        }
-        for id in &vec_ids {
-            if let Some(v) = rows_by_id.get(id) {
-                results.push(VerseResult::from_verse(v, None));
-            }
-        }
+        let results: Vec<VerseResult> = merged
+            .iter()
+            .filter_map(|(id, score)| {
+                rows_by_id
+                    .get(id)
+                    .map(|v| VerseResult::from_verse(v, Some(*score)))
+            })
+            .collect();
 
         ok_json(results)
     }

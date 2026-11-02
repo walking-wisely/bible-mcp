@@ -47,8 +47,8 @@ An internet connection is needed for setup. After that, the local server works o
 
 | Tool | Arguments | What it does |
 | --- | --- | --- |
-| `search_verses` | `query`, `limit?`, `book?` | Finds verses by meaning and keywords. `score` is a relative ranking, not a percentage. |
-| `similar_verses` | `book`, `chapter`, `verse`, `limit?` | Finds related verses: curated cross-references first, then similar wording and meaning. |
+| `search_verses` | `query`, `limit?`, `book?` | Finds verses by meaning and keywords. `score` runs from 0 to 1 and is a ranking, not a percentage. |
+| `similar_verses` | `book`, `chapter`, `verse`, `limit?` | Finds related verses by combining curated cross-references with similar wording and meaning. Uses the same 0 to 1 `score`. |
 | `get_verse` | `book`, `chapter`, `verse` | Returns one verse. |
 | `get_passage` | `book`, `chapter`, `fromVerse`, `toVerse` | Returns a run of verses from one chapter. |
 

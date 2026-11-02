@@ -24,7 +24,7 @@ Usage (local with Ollama):
     python seed.py --backend ollama
 
 Environment variables for upload (loaded from .env):
-    R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET
+    R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET, R2_PUBLIC_URL
 """
 
 import argparse
@@ -48,9 +48,12 @@ load_dotenv(Path(__file__).parent / ".env")
 
 BASE_URL = "https://raw.githubusercontent.com/TehShrike/world-english-bible/master/json"
 XREF_URL = "https://a.openbible.info/data/cross-references.zip"
-HF_MODEL = "nomic-ai/nomic-embed-text-v1"   # sentence-transformers backend
+HF_MODEL = "nomic-ai/nomic-embed-text-v1.5"   # sentence-transformers backend
+EMBED_MODEL = "nomic-embed-text-v1.5"
 OLLAMA_MODEL = "nomic-embed-text"            # ollama backend
 EMBED_DIM = 768
+TEXT_TOKEN_TYPES = ("paragraph text", "line text")
+MIN_EXPECTED_VERSES = 30_000
 BATCH_SIZE = 64   # larger batches are fine on GPU
 
 # (book_num, canonical_name, filename_slug) — 66 books in canonical order
@@ -134,17 +137,17 @@ def fetch_book(slug: str) -> list[dict]:
 def parse_book(tokens: list[dict], book_num: int, book_name: str) -> list[dict]:
     """Extract verses from a book's token array.
 
-    The JSON mixes structural tokens ("paragraph start", "paragraph end", etc.)
-    with actual text tokens ("paragraph text"). A single verse can appear as
-    multiple consecutive "paragraph text" tokens with the same chapterNumber and
-    verseNumber but different sectionNumber — concatenate those.
+    The JSON mixes structural tokens ("paragraph start", "stanza start", etc.)
+    with text tokens: "paragraph text" for prose and "line text" for poetry. A
+    single verse can appear as multiple text tokens with the same chapterNumber
+    and verseNumber — concatenate those.
     """
     # key: (chapter, verse) → accumulated text parts
     verse_parts: dict[tuple[int, int], list[str]] = {}
     verse_order: list[tuple[int, int]] = []
 
     for token in tokens:
-        if token.get("type") != "paragraph text":
+        if token.get("type") not in TEXT_TOKEN_TYPES:
             continue
         ch = token["chapterNumber"]
         v = token["verseNumber"]
@@ -186,6 +189,11 @@ def download_all_verses(cache_dir: Path | None = None) -> list[dict]:
         all_verses.extend(parse_book(tokens, book_num, book_name))
 
     print(f"Total verses parsed: {len(all_verses):,}")
+    if len(all_verses) < MIN_EXPECTED_VERSES:
+        raise SystemExit(
+            f"Only {len(all_verses):,} verses parsed (expected about 31,000); "
+            "the source format may have changed."
+        )
     return all_verses
 
 
@@ -334,7 +342,7 @@ _OSIS_REF_RE = re.compile(r"^([A-Za-z0-9]+)\.(\d+)\.(\d+)$")
 
 def _resolve_osis(ref: str, verse_id_map: dict[tuple[int, int, int], int]) -> int | None:
     """Parse an OSIS ref like 'John.3.16' → verse id, or None if unknown."""
-    m = _OSIS_REF_RE.match(ref)
+    m = _OSIS_REF_RE.match(ref.split("-")[0])
     if not m:
         return None
     book_abbr, chapter, verse = m.group(1), int(m.group(2)), int(m.group(3))
@@ -378,6 +386,8 @@ def seed_cross_references(conn: sqlite3.Connection) -> None:
         try:
             votes = int(row[2])
         except ValueError:
+            continue
+        if votes <= 0:
             continue
         rows_raw.append((row[0], row[1], votes))
         if votes > max_votes:
@@ -433,7 +443,7 @@ def upload_to_r2(db_path: Path, sha256: str) -> None:
     print(f"Uploading {db_path} → s3://{bucket}/{db_key} …")
     s3.upload_file(str(db_path), bucket, db_key)
 
-    public_url = f"https://pub-REPLACE_ME.r2.dev/{db_key}"  # update after bucket is public
+    public_url = f"{os.environ['R2_PUBLIC_URL'].rstrip('/')}/{db_key}"
     manifest = {
         "version": "1.0.0",
         "sha256": sha256,

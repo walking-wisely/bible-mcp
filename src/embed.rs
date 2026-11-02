@@ -20,6 +20,7 @@ fn model() -> Result<&'static Mutex<TextEmbedding>> {
     if let Some(m) = MODEL.get() {
         return Ok(m);
     }
+    crate::ort_runtime::verify()?;
     // fastembed's default path (hf-hub download, then ort dlopen-searching for a
     // system ONNX Runtime library) has been observed to hang indefinitely on more
     // than one host, with no timeout anywhere in that call chain. BIBLE_MCP_MODEL_DIR

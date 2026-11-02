@@ -6,6 +6,12 @@ on:
       - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
+env:
+  ORT_VERSION: "1.24.2"
+
 jobs:
   build:
     name: Build ${{ matrix.target }}
@@ -15,21 +21,26 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            archive_name: bible-mcp-x86_64-unknown-linux-musl.tar.gz
+            target: x86_64-unknown-linux-gnu
+            archive_name: bible-mcp-x86_64-unknown-linux-gnu.tar.gz
             binary_name: bible-mcp
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            archive_name: bible-mcp-x86_64-apple-darwin.tar.gz
-            binary_name: bible-mcp
+            ort_archive: onnxruntime-linux-x64-1.24.2.tgz
+            ort_sha256: 43725474ba5663642e17684717946693850e2005efbd724ac72da278fead25e6
+            ort_library: libonnxruntime.so
           - os: macos-latest
             target: aarch64-apple-darwin
             archive_name: bible-mcp-aarch64-apple-darwin.tar.gz
             binary_name: bible-mcp
+            ort_archive: onnxruntime-osx-arm64-1.24.2.tgz
+            ort_sha256: 0af4fa503e8ea285245b47ee42d0a7461b8156a81270857da0c1d4ecf858abde
+            ort_library: libonnxruntime.dylib
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             archive_name: bible-mcp-x86_64-pc-windows-msvc.zip
             binary_name: bible-mcp.exe
+            ort_archive: onnxruntime-win-x64-1.24.2.zip
+            ort_sha256: 8e3e9c826375352e29cb2614fe44f3d7a4b0ff7b8028ad7a456af9d949a7e8b0
+            ort_library: onnxruntime.dll
 
     steps:
       - uses: actions/checkout@v4
@@ -42,18 +53,30 @@ jobs:
       - name: Cache cargo registry
         uses: Swatinem/rust-cache@v2
 
-      - name: Install musl linker
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
-
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Fetch ONNX Runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL -o ort-archive "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/${{ matrix.ort_archive }}"
+          echo "${{ matrix.ort_sha256 }}  ort-archive" > ort-archive.sha256
+          if command -v sha256sum >/dev/null; then sha256sum -c ort-archive.sha256; else shasum -a 256 -c ort-archive.sha256; fi
+          mkdir -p ort dist
+          case "${{ matrix.ort_archive }}" in
+            *.zip) unzip -q ort-archive -d ort ;;
+            *) tar -xzf ort-archive -C ort ;;
+          esac
+          library=$(find ort -name "${{ matrix.ort_library }}" | head -1)
+          test -n "$library"
+          cp -L "$library" "dist/${{ matrix.ort_library }}"
+          ls -l dist
 
       - name: Package Unix archive
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          mkdir -p dist
           cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} dist/
           cp README.md LICENSE.md dist/
           tar -czf ${{ matrix.archive_name }} -C dist .
@@ -62,7 +85,6 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: |
-          New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" dist/
           Copy-Item README.md dist/
           Copy-Item LICENSE.md dist/

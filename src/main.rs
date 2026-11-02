@@ -43,6 +43,7 @@ enum Command {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    bible_mcp::ort_runtime::configure();
     bible_mcp::db::init_sqlite_vec();
     let cli = Cli::parse();
     match cli.command {

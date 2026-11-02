@@ -304,6 +304,7 @@ dependencies = [
  "dirs 5.0.1",
  "fastembed",
  "indicatif 0.17.11",
+ "libloading",
  "reqwest",
  "rmcp",
  "rusqlite",

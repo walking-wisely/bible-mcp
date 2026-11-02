@@ -7,3 +7,4 @@ pub mod embed;
 pub mod embed_remote;
 pub mod http;
 pub mod mcp_server;
+pub mod ort_runtime;

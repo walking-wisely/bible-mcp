@@ -72,7 +72,7 @@ pub fn embed_query(text: &str) -> Result<Vec<f32>> {
     let mut m = mutex
         .lock()
         .map_err(|_| anyhow::anyhow!("embed model mutex poisoned"))?;
-    let mut results = m.embed(vec![text.to_string()], None)?;
+    let mut results = m.embed(vec![prefixed_query(text)], None)?;
     Ok(results.remove(0))
 }
 
@@ -105,6 +105,10 @@ pub async fn embed_query_async(text: &str) -> Result<Vec<f32>> {
     .context("embed task panicked")?
 }
 
+fn prefixed_query(text: &str) -> String {
+    format!("{}{text}", crate::embed_remote::QUERY_PREFIX)
+}
+
 fn parse_override_embedding(value: &str) -> Result<Vec<f32>> {
     value
         .split(',')
@@ -118,6 +122,11 @@ fn parse_override_embedding(value: &str) -> Result<Vec<f32>> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn local_queries_carry_the_search_query_prefix() {
+        assert_eq!(super::prefixed_query("love"), "search_query: love");
+    }
+
     use super::*;
 
     #[test]

@@ -7,3 +7,5 @@ target/
 # local embedding model cache (see BIBLE_MCP_MODEL_DIR in src/embed.rs)
 .fastembed_cache/
 .model-seed/
+.env
+.env.*

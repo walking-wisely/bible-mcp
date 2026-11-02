@@ -5,7 +5,7 @@ use std::time::Duration;
 
 const ENDPOINT: &str = "https://api.fireworks.ai/inference/v1/embeddings";
 const MODEL: &str = "nomic-ai/nomic-embed-text-v1.5";
-const QUERY_PREFIX: &str = "search_query: ";
+pub(crate) const QUERY_PREFIX: &str = "search_query: ";
 const EXPECTED_DIM: usize = 768;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 const ERROR_BODY_LIMIT: usize = 200;

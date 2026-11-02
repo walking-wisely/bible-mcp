@@ -34,12 +34,15 @@ pub fn default_db_path() -> PathBuf {
 
 pub fn load() -> Result<Config> {
     let path = config_file();
-    if path.exists() {
-        let text = std::fs::read_to_string(&path)?;
-        Ok(serde_json::from_str(&text)?)
+    let mut cfg: Config = if path.exists() {
+        serde_json::from_str(&std::fs::read_to_string(&path)?)?
     } else {
-        Ok(Config::default())
+        Config::default()
+    };
+    if let Some(db_path) = std::env::var_os("BIBLE_MCP_DB_PATH") {
+        cfg.db_path = PathBuf::from(db_path);
     }
+    Ok(cfg)
 }
 
 pub fn save(cfg: &Config) -> Result<()> {

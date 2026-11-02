@@ -11,13 +11,13 @@ You can use it two ways:
 
 ## Use the hosted server
 
-Add the server URL to any MCP client that supports remote servers over streamable HTTP, for example:
+The server address is `https://bible-mcp.ivan-dutov.com/mcp`. Add it to any MCP client that supports remote servers over streamable HTTP, for example:
 
 ```sh
-claude mcp add --transport http bible <SERVER-URL>/mcp
+claude mcp add --transport http bible https://bible-mcp.ivan-dutov.com/mcp
 ```
 
-Replace `<SERVER-URL>` with the address of the server you were given.
+Search queries are limited to 200 characters.
 
 ## Run it locally
 
@@ -67,7 +67,7 @@ Book names are forgiving: `John`, `Jn`, `1 Cor`, `I Kings`, `First Kings` and `S
 
 ## Running a server for others
 
-`serve-http` listens on the address you give it and serves MCP at `/mcp`. Put it behind a reverse proxy or Cloudflare for TLS and rate limiting; the server itself has no authentication.
+`serve-http` listens on the address you give it and serves MCP at `/mcp`. Put it behind a reverse proxy or Cloudflare for TLS and rate limiting; the server itself has no authentication. It handles at most 100 requests at once and answers further ones with `503` and `Retry-After: 1`; `search_verses` rejects queries longer than 200 characters.
 
 | Setting | Purpose |
 | --- | --- |

@@ -106,6 +106,8 @@ fn anyhow_to_mcp(e: anyhow::Error) -> McpError {
     McpError::internal_error(e.to_string(), None)
 }
 
+pub const MAX_QUERY_CHARS: usize = 200;
+
 #[tool_router]
 impl BibleServer {
     #[tool(
@@ -115,6 +117,11 @@ impl BibleServer {
         &self,
         Parameters(args): Parameters<SearchVersesArgs>,
     ) -> Result<CallToolResult, McpError> {
+        if args.query.chars().count() > MAX_QUERY_CHARS {
+            return err_json(anyhow::anyhow!(
+                "Query is too long: the limit is {MAX_QUERY_CHARS} characters."
+            ));
+        }
         let limit = clamp_limit(args.limit);
 
         let book_num = match &args.book {

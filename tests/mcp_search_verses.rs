@@ -71,3 +71,28 @@ async fn search_verses_returns_error_for_unknown_book_filter() -> Result<()> {
     client.cancel().await?;
     Ok(())
 }
+
+#[tokio::test]
+async fn search_verses_rejects_overlong_queries() -> Result<()> {
+    let db = seed_db();
+    let client = spawn_client(db.path(), Some("1,0,0,0")).await?;
+
+    let error = call_tool_error(
+        &client,
+        "search_verses",
+        json!({ "query": "a".repeat(201) }),
+    )
+    .await?;
+    assert!(error.contains("too long"), "{error}");
+
+    let verses: Vec<Value> = call_tool_json(
+        &client,
+        "search_verses",
+        json!({ "query": "a".repeat(200) }),
+    )
+    .await?;
+    assert!(verses.len() <= 10);
+
+    client.cancel().await?;
+    Ok(())
+}

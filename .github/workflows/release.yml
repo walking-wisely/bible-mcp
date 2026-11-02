@@ -79,6 +79,9 @@ jobs:
           library=$(find ort -name "${{ matrix.ort_library }}" | head -1)
           test -n "$library"
           cp -L "$library" "dist/${{ matrix.ort_library }}"
+          root=$(dirname "$(find ort -name LICENSE -maxdepth 2 | head -1)")
+          cp "$root/LICENSE" dist/ONNXRUNTIME_LICENSE
+          cp "$root/ThirdPartyNotices.txt" dist/ONNXRUNTIME_THIRD_PARTY_NOTICES.txt
           ls -l dist
 
       - name: Package Unix archive
@@ -86,7 +89,7 @@ jobs:
         shell: bash
         run: |
           cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} dist/
-          cp README.md LICENSE.md dist/
+          cp README.md LICENSE.md THIRD_PARTY_NOTICES.md dist/
           tar -czf ${{ matrix.archive_name }} -C dist .
 
       - name: Package Windows archive
@@ -96,9 +99,18 @@ jobs:
           Copy-Item "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" dist/
           Copy-Item README.md dist/
           Copy-Item LICENSE.md dist/
+          Copy-Item THIRD_PARTY_NOTICES.md dist/
           Compress-Archive -Path dist\* -DestinationPath "${{ matrix.archive_name }}"
+
+      - name: Write checksum
+        shell: bash
+        run: |
+          if command -v sha256sum >/dev/null; then sha256sum "${{ matrix.archive_name }}" > "${{ matrix.archive_name }}.sha256"; else shasum -a 256 "${{ matrix.archive_name }}" > "${{ matrix.archive_name }}.sha256"; fi
+          cat "${{ matrix.archive_name }}.sha256"
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.archive_name }}
+          files: |
+            ${{ matrix.archive_name }}
+            ${{ matrix.archive_name }}.sha256

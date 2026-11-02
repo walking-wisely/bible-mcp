@@ -2,56 +2,88 @@
 
 > Jesus is King.
 
-A self-contained MCP (Model Context Protocol) server that gives AI tools like Claude Code semantic search over the entire Bible. No external runtime dependencies — just download one binary and run `bible-mcp setup`.
+An MCP (Model Context Protocol) server that gives AI assistants search over the whole Bible: find verses by meaning, look up a reference, read a passage, or follow cross-references. The text is the World English Bible, which is public domain.
 
-## How it works
+You can use it two ways:
 
-1. `bible-mcp setup` downloads a pre-built SQLite database (~50 MB) with all ~31K World English Bible verses and their vector embeddings, then writes the MCP server entry to your Claude Code config.
-2. When an AI tool calls `search_verses`, your query is embedded locally in-process (via `fastembed` / ONNX) — no Ollama, no internet required after the initial setup.
-3. Claude Code spawns `bible-mcp serve` directly as a stdio MCP process.
+- **Hosted**: add a URL to your AI app. Nothing to install.
+- **Local**: download one program, run `bible-mcp setup` once, and it runs on your computer.
 
-## Features
+## Use the hosted server
 
-- Hybrid semantic + keyword search (`search_verses`) via vector KNN + FTS5 BM25, merged with Reciprocal Rank Fusion
-- Theologically-aware similar verse lookup (`similar_verses`) — curated cross-references first, vector similarity to fill gaps
-- Direct verse lookup (`get_verse`) and passage retrieval (`get_passage`)
-- Fuzzy book name matching — "Gen", "First Kings", "1st Cor" all resolve correctly
-- Pre-built WEB (World English Bible) database, freely distributable
-- Single binary, no Python/Node/Ollama required
-
-## Requirements
-
-None. Download the binary for your platform and run it.
-
-On first run, `bible-mcp setup` will download:
-- The Bible database (~50 MB) from Cloudflare R2
-- The `nomic-embed-text` embedding model (~130 MB, cached in `~/.cache/fastembed/`)
-
-Internet access is only needed for this initial setup.
-
-## Installation
-
-Download the binary for your platform from the [releases page](https://github.com/walking-wisely/bible-mcp/releases), then:
+The server address is `https://bible-mcp.ivan-dutov.com/mcp`. Add it to any MCP client that supports remote servers over streamable HTTP, for example:
 
 ```sh
-bible-mcp setup
+claude mcp add --transport http bible https://bible-mcp.ivan-dutov.com/mcp
 ```
 
-That's it. Restart Claude Code and the `bible` MCP server will be active.
+Search queries are limited to 200 characters.
 
-## MCP tools
+## Run it locally
 
-| Tool | Description |
+1. Download the archive for your system from the [releases page](https://github.com/walking-wisely/bible-mcp/releases) and unpack it. Keep everything in the folder together: the `onnxruntime` library must stay next to the `bible-mcp` program.
+2. Run setup:
+
+   ```sh
+   ./bible-mcp setup
+   ```
+
+   Setup downloads the Bible database (about 120 MB), builds a search index, downloads the embedding model (about 550 MB, stored in your user cache folder under `bible-mcp/models`), and adds the server to the Claude Desktop config. Run `bible-mcp status` to see where each piece lives.
+3. Restart Claude Desktop.
+
+For Claude Code, add it yourself instead (use the full path to the program):
+
+```sh
+claude mcp add bible -- /full/path/to/bible-mcp serve
+```
+
+### Platforms
+
+Release archives are built for Windows (x64), Linux (x64, glibc) and macOS on Apple silicon. On macOS the program is not code-signed yet, so the first run may be blocked: open System Settings → Privacy & Security and choose "Open Anyway", or run `xattr -d com.apple.quarantine bible-mcp`.
+
+An internet connection is needed for setup. After that, the local server works offline unless you configure a hosted embedding provider.
+
+## Tools
+
+| Tool | Arguments | What it does |
+| --- | --- | --- |
+| `search_verses` | `query`, `limit?`, `book?` | Finds verses by meaning and keywords. `score` is a relative ranking, not a percentage. |
+| `similar_verses` | `book`, `chapter`, `verse`, `limit?` | Finds related verses: curated cross-references first, then similar wording and meaning. |
+| `get_verse` | `book`, `chapter`, `verse` | Returns one verse. |
+| `get_passage` | `book`, `chapter`, `fromVerse`, `toVerse` | Returns a run of verses from one chapter. |
+
+Book names are forgiving: `John`, `Jn`, `1 Cor`, `I Kings`, `First Kings` and `Song of Songs` all work.
+
+## Commands
+
+| Command | Purpose |
 | --- | --- |
-| `search_verses(query, limit?, book?)` | Hybrid semantic + keyword search over all ~31K verses |
-| `similar_verses(book, chapter, verse, limit?)` | Find theologically related verses |
-| `get_verse(book, chapter, verse)` | Fetch a single verse by reference |
-| `get_passage(book, chapter, from_verse, to_verse)` | Fetch a contiguous range of verses |
+| `bible-mcp setup` | Download the database and model, build the index, configure Claude Desktop |
+| `bible-mcp serve` | Run the server over stdio (what MCP clients launch) |
+| `bible-mcp serve-http --bind ADDR` | Run the server over streamable HTTP at `/mcp` |
+| `bible-mcp update` | Fetch a newer database if one is published |
+| `bible-mcp build-index` | Rebuild the search index from the database |
+| `bible-mcp status` | Show paths and what is installed |
 
-## Bible version
+## Running a server for others
 
-Uses the **World English Bible (WEB)** — public domain, no restrictions, modern readable English.
+`serve-http` listens on the address you give it and serves MCP at `/mcp`. Put it behind a reverse proxy or Cloudflare for TLS and rate limiting; the server itself has no authentication. It handles at most 100 requests at once and answers further ones with `503` and `Retry-After: 1`; `search_verses` rejects queries longer than 200 characters.
+
+| Setting | Purpose |
+| --- | --- |
+| `BIBLE_MCP_DB_PATH` | Where the database is stored (overrides the config file) |
+| `BIBLE_MCP_MANIFEST_URL` | Location of the database manifest used by `setup` and `update` |
+| `FIREWORKS_API_KEY` | Embed queries through Fireworks instead of the local model |
+| `BIBLE_MCP_MODEL_DIR` | Load the embedding model from a local folder |
+| `ORT_DYLIB_PATH` | Use an ONNX Runtime library from another location |
+| `BIBLE_MCP_ANN=off` | Disable the search index and use exact search |
+
+The server refuses to start without a database, stops within 10 seconds of SIGTERM or Ctrl-C, and can be probed by calling `initialize` on `/mcp`.
+
+## Bible text and data
+
+The text is the World English Bible (public domain). Cross-references come from [OpenBible.info](https://www.openbible.info/labs/cross-references/) under CC-BY 4.0. Embeddings use [nomic-embed-text-v1.5](https://huggingface.co/nomic-ai/nomic-embed-text-v1.5) (Apache-2.0). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## License
 
-[Holy Blocker License](LICENSE.md) — see license file for terms.
+Released under the [Bible MCP License](LICENSE.md), a permissive license that requires keeping the copyright notice, a link to this project, and the acknowledgment "Jesus is King."

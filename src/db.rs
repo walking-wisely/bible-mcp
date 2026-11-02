@@ -1,8 +1,11 @@
 use anyhow::{Context, Result};
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OpenFlags};
 use serde::Serialize;
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Verse {
@@ -24,8 +27,81 @@ pub fn init_sqlite_vec() {
     }
 }
 
-fn open(db_path: &Path) -> Result<Connection> {
-    Connection::open(db_path).with_context(|| format!("opening database at {}", db_path.display()))
+const MMAP_BYTES: i64 = 1 << 30;
+
+type Fingerprint = (u64, Option<SystemTime>);
+
+struct Cached {
+    path: PathBuf,
+    fingerprint: Fingerprint,
+    conn: Connection,
+}
+
+thread_local! {
+    static CACHED: RefCell<Option<Cached>> = const { RefCell::new(None) };
+}
+
+/// A connection borrowed from the calling thread's cache and returned to it
+/// on drop. Tokio's blocking threads are long-lived, so each one keeps a warm
+/// connection (and its prepared statements) instead of reopening per call.
+struct PooledConn {
+    path: PathBuf,
+    fingerprint: Fingerprint,
+    conn: Option<Connection>,
+}
+
+impl Deref for PooledConn {
+    type Target = Connection;
+    fn deref(&self) -> &Connection {
+        self.conn.as_ref().expect("connection present until drop")
+    }
+}
+
+impl Drop for PooledConn {
+    fn drop(&mut self) {
+        if let Some(conn) = self.conn.take() {
+            let entry = Cached {
+                path: std::mem::take(&mut self.path),
+                fingerprint: self.fingerprint,
+                conn,
+            };
+            let _ = CACHED.try_with(|slot| *slot.borrow_mut() = Some(entry));
+        }
+    }
+}
+
+fn fingerprint(path: &Path) -> Result<Fingerprint> {
+    let meta = std::fs::metadata(path)
+        .with_context(|| format!("opening database at {}", path.display()))?;
+    Ok((meta.len(), meta.modified().ok()))
+}
+
+fn open(db_path: &Path) -> Result<PooledConn> {
+    let fingerprint = fingerprint(db_path)?;
+    let reused = CACHED
+        .try_with(|slot| {
+            let mut slot = slot.borrow_mut();
+            match slot.take() {
+                Some(c) if c.path == db_path && c.fingerprint == fingerprint => Some(c.conn),
+                _ => None,
+            }
+        })
+        .ok()
+        .flatten();
+    let conn = match reused {
+        Some(conn) => conn,
+        None => {
+            let conn = Connection::open_with_flags(db_path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+                .with_context(|| format!("opening database at {}", db_path.display()))?;
+            conn.pragma_update(None, "mmap_size", MMAP_BYTES)?;
+            conn
+        }
+    };
+    Ok(PooledConn {
+        path: db_path.to_path_buf(),
+        fingerprint,
+        conn: Some(conn),
+    })
 }
 
 fn floats_to_blob(floats: &[f32]) -> Vec<u8> {
@@ -43,7 +119,7 @@ fn collect_id_score(
     sql: &str,
     p: impl rusqlite::Params,
 ) -> Result<Vec<(i64, f64)>> {
-    let mut stmt = conn.prepare(sql)?;
+    let mut stmt = conn.prepare_cached(sql)?;
     let mut out = Vec::new();
     let mut rows = stmt.query(p)?;
     while let Some(row) = rows.next()? {
@@ -53,7 +129,7 @@ fn collect_id_score(
 }
 
 fn collect_verses(conn: &Connection, sql: &str, p: impl rusqlite::Params) -> Result<Vec<Verse>> {
-    let mut stmt = conn.prepare(sql)?;
+    let mut stmt = conn.prepare_cached(sql)?;
     let mut out = Vec::new();
     let mut rows = stmt.query(p)?;
     while let Some(row) = rows.next()? {
@@ -228,7 +304,8 @@ pub fn get_cross_refs_sync(db_path: &Path, verse_id: i64, limit: usize) -> Resul
 
 pub fn get_verse_embedding_sync(db_path: &Path, verse_id: i64) -> Result<Option<Vec<f32>>> {
     let conn = open(db_path)?;
-    let mut stmt = conn.prepare("SELECT embedding FROM verse_embeddings WHERE rowid = ?1")?;
+    let mut stmt =
+        conn.prepare_cached("SELECT embedding FROM verse_embeddings WHERE rowid = ?1")?;
     let mut rows = stmt.query(params![verse_id])?;
     match rows.next()? {
         Some(row) => {

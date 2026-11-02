@@ -72,6 +72,14 @@ pub fn embed_query(text: &str) -> Result<Vec<f32>> {
 /// (Tokio has no way to cancel it) — this only stops the caller from waiting
 /// on it, it doesn't free the thread.
 pub async fn embed_query_async(text: &str) -> Result<Vec<f32>> {
+    if crate::embed_remote::enabled() {
+        match crate::embed_remote::embed_query(text).await {
+            Ok(v) => return Ok(v),
+            Err(e) => eprintln!(
+                "bible-mcp: Fireworks embedding failed ({e:#}); falling back to local model"
+            ),
+        }
+    }
     let timeout = if MODEL.get().is_some() {
         EMBED_TIMEOUT
     } else {

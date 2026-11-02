@@ -157,3 +157,30 @@ fn get_verses_by_ids_preserves_order() {
     assert_eq!(rows[1].id, 1);
     assert_eq!(rows[2].id, 2);
 }
+
+#[test]
+fn replaced_database_file_is_picked_up_by_a_reused_connection() {
+    let file = seed_db();
+    let path = file.path().to_path_buf();
+    assert!(get_verse_by_ref_sync(&path, 43, 3, 16).unwrap().is_some());
+
+    let replacement = seed_db();
+    {
+        let conn = Connection::open(replacement.path()).unwrap();
+        conn.execute("DELETE FROM verses WHERE id = 1", []).unwrap();
+    }
+    std::fs::copy(replacement.path(), &path).unwrap();
+
+    assert!(get_verse_by_ref_sync(&path, 43, 3, 16).unwrap().is_none());
+}
+
+#[test]
+fn repeated_calls_on_one_thread_reuse_the_database() {
+    let file = seed_db();
+    for _ in 0..50 {
+        let verse = get_verse_by_ref_sync(file.path(), 43, 3, 16)
+            .unwrap()
+            .unwrap();
+        assert_eq!(verse.id, 1);
+    }
+}

@@ -264,6 +264,7 @@ def create_db(path: Path) -> sqlite3.Connection:
         );
 
         CREATE INDEX IF NOT EXISTS idx_xref_from ON cross_references(from_verse_id);
+        CREATE INDEX IF NOT EXISTS idx_verses_ref ON verses(book_num, chapter, verse);
         """
     )
     conn.commit()

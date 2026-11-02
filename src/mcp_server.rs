@@ -1,8 +1,7 @@
 use rmcp::{
-    model::{
-        CallToolResult, Content, Implementation, ProtocolVersion, ServerCapabilities, ServerInfo,
-    },
-    schemars, tool, Error as McpError, ServerHandler,
+    handler::server::{router::tool::ToolRouter, wrapper::Parameters},
+    model::{CallToolResult, ContentBlock, Implementation, ServerCapabilities, ServerConfig},
+    schemars, tool, tool_handler, tool_router, ErrorData as McpError, ServerHandler,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -13,6 +12,16 @@ use crate::{books::resolve_book, db, embed};
 #[derive(Debug, Clone)]
 pub struct BibleServer {
     pub db_path: PathBuf,
+    tool_router: ToolRouter<Self>,
+}
+
+impl BibleServer {
+    pub fn new(db_path: PathBuf) -> Self {
+        Self {
+            db_path,
+            tool_router: Self::tool_router(),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -84,27 +93,27 @@ impl VerseResult {
 fn ok_json(value: impl Serialize) -> Result<CallToolResult, McpError> {
     let text = serde_json::to_string_pretty(&value)
         .map_err(|e| McpError::internal_error(e.to_string(), None))?;
-    Ok(CallToolResult::success(vec![Content::text(text)]))
+    Ok(CallToolResult::success(vec![ContentBlock::text(text)]))
 }
 
 fn err_json(msg: impl std::fmt::Display) -> Result<CallToolResult, McpError> {
     let text = serde_json::to_string_pretty(&json!({ "error": msg.to_string() }))
         .map_err(|e| McpError::internal_error(e.to_string(), None))?;
-    Ok(CallToolResult::success(vec![Content::text(text)]))
+    Ok(CallToolResult::success(vec![ContentBlock::text(text)]))
 }
 
 fn anyhow_to_mcp(e: anyhow::Error) -> McpError {
     McpError::internal_error(e.to_string(), None)
 }
 
-#[tool(tool_box)]
+#[tool_router]
 impl BibleServer {
     #[tool(
         description = "Hybrid semantic + keyword search over all ~31K Bible verses (World English Bible). Returns the most relevant verses for a topic, theme, concept, or phrase. Optionally filter by book."
     )]
     async fn search_verses(
         &self,
-        #[tool(aggr)] args: SearchVersesArgs,
+        Parameters(args): Parameters<SearchVersesArgs>,
     ) -> Result<CallToolResult, McpError> {
         let limit = clamp_limit(args.limit);
 
@@ -142,7 +151,7 @@ impl BibleServer {
     )]
     async fn similar_verses(
         &self,
-        #[tool(aggr)] args: SimilarVersesArgs,
+        Parameters(args): Parameters<SimilarVersesArgs>,
     ) -> Result<CallToolResult, McpError> {
         let limit = clamp_limit(args.limit);
 
@@ -221,7 +230,7 @@ impl BibleServer {
     #[tool(description = "Retrieve a single Bible verse by exact reference.")]
     async fn get_verse(
         &self,
-        #[tool(aggr)] args: GetVerseArgs,
+        Parameters(args): Parameters<GetVerseArgs>,
     ) -> Result<CallToolResult, McpError> {
         let (book_num, canonical_book) = match resolve_book(&args.book) {
             Ok(r) => r,
@@ -243,7 +252,7 @@ impl BibleServer {
     #[tool(description = "Retrieve a contiguous range of verses from one chapter.")]
     async fn get_passage(
         &self,
-        #[tool(aggr)] args: GetPassageArgs,
+        Parameters(args): Parameters<GetPassageArgs>,
     ) -> Result<CallToolResult, McpError> {
         let (book_num, _) = match resolve_book(&args.book) {
             Ok(r) => r,
@@ -269,22 +278,15 @@ impl BibleServer {
     }
 }
 
-#[tool(tool_box)]
+#[tool_handler(router = self.tool_router)]
 impl ServerHandler for BibleServer {
-    fn get_info(&self) -> ServerInfo {
-        ServerInfo {
-            protocol_version: ProtocolVersion::V_2024_11_05,
-            capabilities: ServerCapabilities::builder().enable_tools().build(),
-            server_info: Implementation {
-                name: "bible-mcp".to_string(),
-                version: env!("CARGO_PKG_VERSION").to_string(),
-            },
-            instructions: Some(
+    fn get_info(&self) -> ServerConfig {
+        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
+            .with_server_info(Implementation::new("bible-mcp", env!("CARGO_PKG_VERSION")))
+            .with_instructions(
                 "Search and retrieve Bible verses (World English Bible). \
                  Use search_verses for topics/themes, similar_verses for related passages, \
-                 get_verse for a specific reference, get_passage for a range."
-                    .to_string(),
-            ),
-        }
+                 get_verse for a specific reference, get_passage for a range.",
+            )
     }
 }

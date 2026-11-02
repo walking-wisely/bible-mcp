@@ -2,7 +2,7 @@ mod mcp_support;
 
 use anyhow::Result;
 use mcp_support::{call_tool_error, call_tool_json, seed_db, spawn_client};
-use rmcp::model::CallToolRequestParam;
+use rmcp::model::CallToolRequestParams;
 use serde_json::{json, Value};
 
 #[tokio::test]
@@ -59,20 +59,20 @@ async fn get_passage_requires_camel_case_range_fields() -> Result<()> {
     let db = seed_db();
     let client = spawn_client(db.path(), None).await?;
 
-    let err = client
-        .call_tool(CallToolRequestParam {
-            name: "get_passage".into(),
-            arguments: Some(mcp_support::args(json!({
+    let result = client
+        .call_tool(
+            CallToolRequestParams::new("get_passage").with_arguments(mcp_support::args(json!({
                 "book": "John",
                 "chapter": 3,
                 "from_verse": 16,
                 "to_verse": 17
             }))),
-        })
-        .await
-        .expect_err("snake_case range fields should fail at argument deserialization");
+        )
+        .await?;
 
-    assert!(err.to_string().contains("missing field"));
+    assert_eq!(result.is_error, Some(true));
+    let message = result.content[0].as_text().unwrap().text.clone();
+    assert!(message.contains("missing field"), "got: {message}");
 
     client.cancel().await?;
     Ok(())

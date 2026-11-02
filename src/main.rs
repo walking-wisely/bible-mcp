@@ -19,6 +19,12 @@ enum Command {
     Setup,
     /// Start the MCP stdio server
     Serve,
+    /// Start the MCP server over streamable HTTP
+    ServeHttp {
+        /// Address to listen on. Defaults to loopback; put a reverse proxy in front for public access.
+        #[arg(long, default_value = "127.0.0.1:8000")]
+        bind: std::net::SocketAddr,
+    },
     /// Show current configuration and status
     Status,
     /// Re-check the manifest and update the database if a new version exists
@@ -40,6 +46,7 @@ async fn main() -> Result<()> {
     match cli.command {
         Command::Setup => cmd_setup().await,
         Command::Serve => cmd_serve().await,
+        Command::ServeHttp { bind } => cmd_serve_http(bind).await,
         Command::Status => cmd_status(),
         Command::Update => cmd_update().await,
         Command::BenchEmbed { text, concurrency } => cmd_bench_embed(text, concurrency).await,
@@ -77,11 +84,22 @@ async fn cmd_setup() -> Result<()> {
 
 async fn cmd_serve() -> Result<()> {
     let cfg = config::load()?;
-    let server = mcp_server::BibleServer {
-        db_path: cfg.db_path,
-    };
+    let server = mcp_server::BibleServer::new(cfg.db_path);
     let service = server.serve(stdio()).await?;
     service.waiting().await?;
+    Ok(())
+}
+
+async fn cmd_serve_http(bind: std::net::SocketAddr) -> Result<()> {
+    let cfg = config::load()?;
+    eprintln!(
+        "bible-mcp: serving MCP over streamable HTTP at http://{bind}{}",
+        bible_mcp::http::MCP_PATH
+    );
+    bible_mcp::http::serve(bind, cfg.db_path, async {
+        let _ = tokio::signal::ctrl_c().await;
+    })
+    .await?;
     Ok(())
 }
 

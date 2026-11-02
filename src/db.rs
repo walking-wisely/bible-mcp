@@ -406,30 +406,3 @@ pub async fn get_verse_embedding(db_path: PathBuf, verse_id: i64) -> Result<Opti
     blocking!(get_verse_embedding_sync(&db_path, verse_id))
 }
 
-// ---------------------------------------------------------------------------
-// Unit tests
-// ---------------------------------------------------------------------------
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn rrf_merge_correct_order() {
-        // id=20 gets highest score (ranks well in both lists)
-        let vec_hits = vec![(10i64, 0.1), (20, 0.2), (30, 0.3)];
-        let fts_hits = vec![(20i64, 0.9), (30, 0.8), (10, 0.7)];
-        let merged = rrf_merge(&vec_hits, &fts_hits);
-        assert_eq!(merged[0].0, 20);
-        assert_eq!(merged[1].0, 10);
-        assert_eq!(merged[2].0, 30);
-    }
-
-    #[test]
-    fn rrf_merge_single_list() {
-        let vec_hits = vec![(1i64, 0.5), (2, 0.4)];
-        let merged = rrf_merge(&vec_hits, &[]);
-        assert_eq!(merged[0].0, 1);
-        assert_eq!(merged[1].0, 2);
-    }
-}

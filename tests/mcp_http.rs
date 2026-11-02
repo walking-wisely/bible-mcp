@@ -50,7 +50,9 @@ async fn initialize_and_list_tools_over_http() {
     let addr = free_addr();
     let url = format!("http://{addr}{}", http::MCP_PATH);
     let (stop, stopped) = oneshot::channel::<()>();
-    let server = tokio::spawn(http::serve(addr, "unused.db".into(), async {
+    let db = std::env::temp_dir().join(format!("bible-mcp-http-test-{}.db", addr.port()));
+    std::fs::write(&db, b"").unwrap();
+    let server = tokio::spawn(http::serve(addr, db.clone(), async {
         let _ = stopped.await;
     }));
     let client = reqwest::Client::builder().no_proxy().build().unwrap();
@@ -105,4 +107,13 @@ async fn initialize_and_list_tools_over_http() {
 
     stop.send(()).unwrap();
     server.await.unwrap().unwrap();
+}
+
+#[tokio::test]
+async fn serve_refuses_to_start_without_a_database() {
+    let missing = std::env::temp_dir().join("bible-mcp-definitely-missing.db");
+    let err = http::serve(free_addr(), missing, std::future::pending())
+        .await
+        .unwrap_err();
+    assert_eq!(err.kind(), std::io::ErrorKind::NotFound);
 }

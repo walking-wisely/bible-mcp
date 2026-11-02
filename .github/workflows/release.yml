@@ -54,7 +54,15 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build release binary
-        run: cargo build --release --target ${{ matrix.target }}
+        shell: bash
+        env:
+          BIBLE_MCP_MANIFEST_URL: ${{ vars.BIBLE_MCP_MANIFEST_URL }}
+        run: |
+          if [ -z "$BIBLE_MCP_MANIFEST_URL" ]; then
+            echo "repository variable BIBLE_MCP_MANIFEST_URL is not set" >&2
+            exit 1
+          fi
+          cargo build --release --target ${{ matrix.target }}
 
       - name: Fetch ONNX Runtime
         shell: bash

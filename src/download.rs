@@ -4,7 +4,7 @@ use reqwest::Client;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::Duration;
 
 const MANIFEST_URL_VAR: &str = "BIBLE_MCP_MANIFEST_URL";
@@ -108,11 +108,12 @@ pub fn db_needs_update(db_path: &Path, manifest: &Manifest) -> bool {
     }
 }
 
-pub async fn ensure_db(db_path: &Path) -> Result<PathBuf> {
+pub async fn ensure_db(db_path: &Path) -> Result<bool> {
     let manifest = fetch_manifest().await?;
     if db_needs_update(db_path, &manifest) {
         println!("Downloading database (version {})...", manifest.version);
         download_db(db_path, &manifest).await?;
+        return Ok(true);
     }
-    Ok(db_path.to_path_buf())
+    Ok(false)
 }

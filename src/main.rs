@@ -63,7 +63,9 @@ async fn cmd_setup() -> Result<()> {
     println!("Setting up bible-mcp...");
     println!("Database will be stored at: {}", db_path.display());
 
-    download::ensure_db(&db_path).await?;
+    if download::ensure_db(&db_path).await? {
+        build_index_after_download(&db_path).await;
+    }
 
     println!("Pre-loading embedding model (this may take a minute on first run)...");
     embed::embed_query_async("warm up").await?;
@@ -99,11 +101,44 @@ async fn cmd_serve_http(bind: std::net::SocketAddr) -> Result<()> {
         "bible-mcp: serving MCP over streamable HTTP at http://{bind}{}",
         bible_mcp::http::MCP_PATH
     );
-    bible_mcp::http::serve(bind, cfg.db_path, async {
-        let _ = tokio::signal::ctrl_c().await;
-    })
-    .await?;
+    bible_mcp::http::serve(bind, cfg.db_path, shutdown_signal()).await?;
     Ok(())
+}
+
+async fn shutdown_signal() {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{signal, SignalKind};
+        match signal(SignalKind::terminate()) {
+            Ok(mut term) => {
+                tokio::select! {
+                    _ = tokio::signal::ctrl_c() => {}
+                    _ = term.recv() => {}
+                }
+            }
+            Err(_) => {
+                let _ = tokio::signal::ctrl_c().await;
+            }
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = tokio::signal::ctrl_c().await;
+    }
+}
+
+async fn build_index_after_download(db_path: &std::path::Path) {
+    println!("Building search index...");
+    let path = db_path.to_path_buf();
+    match tokio::task::spawn_blocking(move || ann::build(&path)).await {
+        Ok(Ok(count)) => println!("Indexed {count} vectors."),
+        Ok(Err(e)) => {
+            eprintln!("Search index not built ({e}); searches will use the slower exact scan.")
+        }
+        Err(e) => {
+            eprintln!("Search index not built ({e}); searches will use the slower exact scan.")
+        }
+    }
 }
 
 fn cmd_build_index() -> Result<()> {
@@ -146,6 +181,7 @@ async fn cmd_update() -> Result<()> {
             manifest.version
         );
         download::download_db(&cfg.db_path, &manifest).await?;
+        build_index_after_download(&cfg.db_path).await;
         println!("Update complete.");
     } else {
         println!("Database is up to date (version {}).", manifest.version);

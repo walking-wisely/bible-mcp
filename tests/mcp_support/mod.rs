@@ -3,7 +3,7 @@
 use anyhow::Result;
 use bible_mcp::db;
 use rmcp::{
-    model::{CallToolRequestParam, CallToolResult},
+    model::{CallToolRequestParams, CallToolResult},
     service::RunningService,
     transport::TokioChildProcess,
     RoleClient, ServiceExt,
@@ -119,7 +119,7 @@ pub async fn spawn_client(
         command.env("BIBLE_MCP_TEST_EMBEDDING", embedding);
     }
 
-    let transport = TokioChildProcess::new(&mut command)?;
+    let transport = TokioChildProcess::new(command)?;
     let client = ().serve(transport).await?;
     Ok(client)
 }
@@ -132,7 +132,7 @@ pub fn parse_tool_result<T: DeserializeOwned>(result: CallToolResult) -> T {
     let text = result
         .content
         .first()
-        .and_then(|content| content.raw.as_text())
+        .and_then(|content| content.as_text())
         .map(|text| text.text.clone())
         .expect("tool result should contain text JSON");
     serde_json::from_str(&text).expect("tool result text should be valid JSON")
@@ -152,10 +152,7 @@ pub async fn call_tool_json<T: DeserializeOwned>(
     arguments: Value,
 ) -> Result<T> {
     let result = client
-        .call_tool(CallToolRequestParam {
-            name: name.to_string().into(),
-            arguments: Some(args(arguments)),
-        })
+        .call_tool(CallToolRequestParams::new(name.to_string()).with_arguments(args(arguments)))
         .await?;
     Ok(parse_tool_result(result))
 }
@@ -166,10 +163,7 @@ pub async fn call_tool_error(
     arguments: Value,
 ) -> Result<String> {
     let result = client
-        .call_tool(CallToolRequestParam {
-            name: name.to_string().into(),
-            arguments: Some(args(arguments)),
-        })
+        .call_tool(CallToolRequestParams::new(name.to_string()).with_arguments(args(arguments)))
         .await?;
     Ok(parse_error_message(result))
 }

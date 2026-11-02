@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 tokio        = { version = "1", features = ["full"] }
-rmcp         = { version = "0.1", features = ["client", "server", "transport-io", "transport-child-process"] }
+rmcp         = { version = "3.8", features = ["client", "server", "macros", "transport-io", "transport-child-process", "transport-streamable-http-server"] }
 rusqlite     = { version = "0.31", features = ["bundled"] }
 sqlite-vec   = "0.1"
 usearch      = "2.26"
@@ -27,6 +27,7 @@ strsim       = "0.11"
 dirs         = "5"
 sha2         = "0.10"
 anyhow       = "1"
+axum         = "0.8"
 
 [dev-dependencies]
 tempfile   = "3"

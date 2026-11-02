@@ -30,7 +30,7 @@ pub fn init_sqlite_vec() {
 // Windows refuses to overwrite a memory-mapped file, which would block `update` while `serve` runs.
 const MMAP_BYTES: i64 = if cfg!(windows) { 0 } else { 1 << 30 };
 
-type Fingerprint = (u64, Option<SystemTime>);
+pub(crate) type Fingerprint = (u64, Option<SystemTime>);
 
 struct Cached {
     path: PathBuf,
@@ -45,7 +45,7 @@ thread_local! {
 /// A connection borrowed from the calling thread's cache and returned to it
 /// on drop. Tokio's blocking threads are long-lived, so each one keeps a warm
 /// connection (and its prepared statements) instead of reopening per call.
-struct PooledConn {
+pub(crate) struct PooledConn {
     path: PathBuf,
     fingerprint: Fingerprint,
     conn: Option<Connection>,
@@ -77,7 +77,7 @@ fn fingerprint(path: &Path) -> Result<Fingerprint> {
     Ok((meta.len(), meta.modified().ok()))
 }
 
-fn open(db_path: &Path) -> Result<PooledConn> {
+pub(crate) fn open(db_path: &Path) -> Result<PooledConn> {
     let fingerprint = fingerprint(db_path)?;
     let reused = CACHED
         .try_with(|slot| {
@@ -175,6 +175,9 @@ pub fn vector_search_sync(
     limit: usize,
     book_num: Option<u32>,
 ) -> Result<Vec<(i64, f64)>> {
+    if let Some(hits) = crate::ann::search(db_path, embedding, limit, book_num)? {
+        return Ok(hits);
+    }
     let conn = open(db_path)?;
     let blob = floats_to_blob(embedding);
     let lim = limit as i64;

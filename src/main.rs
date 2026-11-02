@@ -1,4 +1,4 @@
-use bible_mcp::{config, download, embed, mcp_server};
+use bible_mcp::{ann, config, download, embed, mcp_server};
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -23,6 +23,8 @@ enum Command {
     Status,
     /// Re-check the manifest and update the database if a new version exists
     Update,
+    /// Build the approximate nearest-neighbour index next to the database
+    BuildIndex,
     /// Run one or more embeddings and print per-call timing, for load testing
     BenchEmbed {
         #[arg(default_value = "In the beginning God created the heavens and the earth")]
@@ -42,6 +44,7 @@ async fn main() -> Result<()> {
         Command::Serve => cmd_serve().await,
         Command::Status => cmd_status(),
         Command::Update => cmd_update().await,
+        Command::BuildIndex => cmd_build_index(),
         Command::BenchEmbed { text, concurrency } => cmd_bench_embed(text, concurrency).await,
     }
 }
@@ -82,6 +85,20 @@ async fn cmd_serve() -> Result<()> {
     };
     let service = server.serve(stdio()).await?;
     service.waiting().await?;
+    Ok(())
+}
+
+fn cmd_build_index() -> Result<()> {
+    let cfg = config::load()?;
+    let started = std::time::Instant::now();
+    let count = ann::build(&cfg.db_path)?;
+    let path = ann::index_path(&cfg.db_path);
+    println!(
+        "Indexed {count} vectors in {:.1}s -> {} ({:.1} MB)",
+        started.elapsed().as_secs_f64(),
+        path.display(),
+        std::fs::metadata(&path)?.len() as f64 / 1e6
+    );
     Ok(())
 }
 

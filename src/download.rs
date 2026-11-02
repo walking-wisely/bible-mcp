@@ -3,9 +3,30 @@ use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
+use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
-const MANIFEST_URL: &str = "https://pub-placeholder.r2.dev/manifest.json";
+const MANIFEST_URL_VAR: &str = "BIBLE_MCP_MANIFEST_URL";
+
+fn manifest_url() -> Result<String> {
+    std::env::var(MANIFEST_URL_VAR)
+        .ok()
+        .filter(|v| !v.is_empty())
+        .or_else(|| option_env!("BIBLE_MCP_MANIFEST_URL").map(str::to_owned))
+        .filter(|v| !v.is_empty())
+        .with_context(|| {
+            format!("no database manifest URL configured; set {MANIFEST_URL_VAR} to the manifest.json URL")
+        })
+}
+
+fn http_client() -> Result<Client> {
+    Client::builder()
+        .connect_timeout(Duration::from_secs(15))
+        .timeout(Duration::from_secs(900))
+        .build()
+        .context("building HTTP client")
+}
 
 #[derive(Debug, Deserialize)]
 pub struct Manifest {
@@ -15,12 +36,13 @@ pub struct Manifest {
 }
 
 pub async fn fetch_manifest() -> Result<Manifest> {
-    let client = Client::new();
-    let manifest: Manifest = client
-        .get(MANIFEST_URL)
+    let manifest: Manifest = http_client()?
+        .get(manifest_url()?)
         .send()
         .await
         .context("fetching manifest")?
+        .error_for_status()
+        .context("manifest request failed")?
         .json()
         .await
         .context("parsing manifest JSON")?;
@@ -32,12 +54,13 @@ pub async fn download_db(dest: &Path, manifest: &Manifest) -> Result<()> {
         std::fs::create_dir_all(parent)?;
     }
 
-    let client = Client::new();
-    let response = client
+    let response = http_client()?
         .get(&manifest.url)
         .send()
         .await
-        .context("starting database download")?;
+        .context("starting database download")?
+        .error_for_status()
+        .context("database download failed")?;
 
     let total = response.content_length();
     let pb = ProgressBar::new(total.unwrap_or(0));
@@ -61,7 +84,17 @@ pub async fn download_db(dest: &Path, manifest: &Manifest) -> Result<()> {
         );
     }
 
-    std::fs::write(dest, &bytes).context("writing database file")?;
+    let tmp = dest.with_extension("download");
+    let write = || -> std::io::Result<()> {
+        let mut file = std::fs::File::create(&tmp)?;
+        file.write_all(&bytes)?;
+        file.sync_all()?;
+        std::fs::rename(&tmp, dest)
+    };
+    if let Err(e) = write() {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(e).context("writing database file");
+    }
     Ok(())
 }
 

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161411" media="(prefers-color-scheme: dark)">
+<title>Add the Bible to Perplexity | Bible MCP</title>
+<meta name="description" content="Add the free Bible MCP server to Perplexity as a custom remote connector in a few clicks. No API key or account linking needed.">
+<link rel="canonical" href="https://bible-mcp.ivan-dutov.com/guides/perplexity">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Bible MCP">
+<meta property="og:title" content="Add the Bible to Perplexity | Bible MCP">
+<meta property="og:description" content="Add the free Bible MCP server to Perplexity as a custom remote connector in a few clicks. No API key or account linking needed.">
+<meta property="og:url" content="https://bible-mcp.ivan-dutov.com/guides/perplexity">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header><div class="wrap"><a class="brand" href="/"><img src="/favicon.svg" alt="" width="22" height="22">Bible MCP</a><nav aria-label="Main"><a href="/">Home</a><a href="/guides/" aria-current="page">Setup guides</a><a href="https://github.com/walking-wisely/bible-mcp">GitHub</a></nav></div></header>
+<main id="main" class="wrap">
+<p class="crumb"><a href="/guides/">All setup guides</a></p>
+<h1>Add the Bible to Perplexity</h1>
+<p class="lead">Perplexity supports custom remote MCP connectors, and Bible MCP needs no sign-in.</p>
+<p class="note">Steps checked against each app's own help pages in November 2026. App menus change often, so if a label looks different, look for the closest match.</p>
+<div class="note"><strong>Plans.</strong> Perplexity's help page does not list the plans. Custom connectors have been reported as a paid-plan feature, so check yours. On a team account an admin must switch on <strong>Allow members to add custom connectors</strong>.</div>
+<ol>
+<li>Open <strong>Plugins</strong> in the sidebar (or <strong>Customize</strong>, then <strong>Connectors</strong>).</li>
+<li>Choose <strong>Add custom</strong>, then <strong>Add MCP connector</strong>, then <strong>Remote</strong>.</li>
+<li>Enter <code>Bible</code> as the name and paste this as the <strong>MCP server URL</strong>:
+<pre><code>https://bible-mcp.ivan-dutov.com/mcp</code></pre></li>
+<li>Open <strong>Advanced</strong> and set <strong>Authentication</strong> to <strong>None</strong> and <strong>Transport</strong> to <strong>Streamable HTTP</strong>.</li>
+<li>Tick the acknowledgement box and click <strong>Add</strong>.</li>
+<li>Click the new card to enable it, then ask your question.</li>
+</ol>
+<h2>Try it</h2>
+<p>Ask something like:</p>
+<ul>
+<li>"Search the Bible for verses about patience."</li>
+<li>"Show me Romans 8:28-30."</li>
+<li>"What other verses are related to John 3:16?"</li>
+</ul>
+<p>Source: <a href="https://www.perplexity.ai/help-center/en/articles/13915507-adding-custom-remote-connectors">Perplexity help: adding custom remote connectors</a>.</p>
+<h2>Didn't work?</h2>
+<ul>
+<li>Copy the address exactly, including <code>https://</code> and the <code>/mcp</code> at the end.</li>
+<li>The server needs no sign-in and no key. If a screen asks for credentials, choose the "none" option.</li>
+<li>Start a new chat after adding it, and make sure the Bible is switched on for that chat.</li>
+<li>Still stuck? <a href="https://github.com/walking-wisely/bible-mcp/issues">Open an issue on GitHub</a> and say which app and which step.</li>
+</ul>
+</main>
+<footer><div class="wrap"><p class="amen">Jesus is King.</p><p>Bible text: World English Bible (public domain). Cross-references: <a href="https://www.openbible.info/labs/cross-references/">OpenBible.info</a>, CC-BY 4.0. Embeddings: nomic-embed-text-v1.5, Apache-2.0. Source and license on <a href="https://github.com/walking-wisely/bible-mcp">GitHub</a>.</p></div></footer>
+<script src="/site.js" defer></script>
+</body>
+</html>

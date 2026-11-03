@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161411" media="(prefers-color-scheme: dark)">
+<title>Add the Bible to Gemini (app and CLI) | Bible MCP</title>
+<meta name="description" content="How to add the free Bible MCP server to the Gemini app or to Gemini CLI, with the exact steps and the requirements for each.">
+<link rel="canonical" href="https://bible-mcp.ivan-dutov.com/guides/gemini">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Bible MCP">
+<meta property="og:title" content="Add the Bible to Gemini (app and CLI) | Bible MCP">
+<meta property="og:description" content="How to add the free Bible MCP server to the Gemini app or to Gemini CLI, with the exact steps and the requirements for each.">
+<meta property="og:url" content="https://bible-mcp.ivan-dutov.com/guides/gemini">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header><div class="wrap"><a class="brand" href="/"><img src="/favicon.svg" alt="" width="22" height="22">Bible MCP</a><nav aria-label="Main"><a href="/">Home</a><a href="/guides/" aria-current="page">Setup guides</a><a href="https://github.com/walking-wisely/bible-mcp">GitHub</a></nav></div></header>
+<main id="main" class="wrap">
+<p class="crumb"><a href="/guides/">All setup guides</a></p>
+<h1>Add the Bible to Gemini</h1>
+<p class="lead">There are two ways: the Gemini app, and the Gemini command line tool.</p>
+<p class="note">Steps checked against each app's own help pages in November 2026. App menus change often, so if a label looks different, look for the closest match.</p>
+<h2>Gemini app</h2>
+<div class="note"><strong>Requirements (set by Google).</strong> You must be 18 or older, in the US, using a personal Google account (not work or school) with Keep Activity turned on, in English. You can only add the server on the web, but it then works in the mobile app too.</div>
+<ol>
+<li>Open gemini.google.com and go to <strong>Settings</strong>, then <strong>Connected Apps</strong>. If you do not see it, look under <strong>Personal Intelligence</strong>.</li>
+<li>Under <strong>Custom apps</strong>, click <strong>Add a custom app</strong>.</li>
+<li>Paste this as the <strong>MCP server URL</strong>:
+<pre><code>https://bible-mcp.ivan-dutov.com/mcp</code></pre></li>
+<li>Click <strong>Next</strong> and follow the on-screen steps. You do not need credentials, so leave the advanced fields alone.</li>
+<li>In a chat, type <strong>@</strong> and pick the app.</li>
+</ol>
+<p class="note">Gemini's custom apps are built around Google sign-in, and we have not been able to confirm that it accepts a server that needs none. If the app refuses the address, use Gemini CLI below.</p>
+<h2>Gemini CLI</h2>
+<p>For people who use the terminal:</p>
+<pre><code>gemini mcp add --transport http bible https://bible-mcp.ivan-dutov.com/mcp</code></pre>
+<p>Or add it to <code>~/.gemini/settings.json</code>:</p>
+<pre><code>{
+  &quot;mcpServers&quot;: {
+    &quot;bible&quot;: {
+      &quot;httpUrl&quot;: &quot;https://bible-mcp.ivan-dutov.com/mcp&quot;
+    }
+  }
+}</code></pre>
+<p>Use <code>httpUrl</code>. The plain <code>url</code> key means the older SSE protocol.</p>
+<h2>Try it</h2>
+<p>Ask something like:</p>
+<ul>
+<li>"Search the Bible for verses about patience."</li>
+<li>"Show me Romans 8:28-30."</li>
+<li>"What other verses are related to John 3:16?"</li>
+</ul>
+<p>Sources: <a href="https://support.google.com/gemini/answer/17209137">Gemini Apps Help: custom apps</a> and <a href="https://geminicli.com/docs/tools/mcp-server/">Gemini CLI MCP docs</a>.</p>
+<h2>Didn't work?</h2>
+<ul>
+<li>Copy the address exactly, including <code>https://</code> and the <code>/mcp</code> at the end.</li>
+<li>The server needs no sign-in and no key. If a screen asks for credentials, choose the "none" option.</li>
+<li>Start a new chat after adding it, and make sure the Bible is switched on for that chat.</li>
+<li>Still stuck? <a href="https://github.com/walking-wisely/bible-mcp/issues">Open an issue on GitHub</a> and say which app and which step.</li>
+</ul>
+</main>
+<footer><div class="wrap"><p class="amen">Jesus is King.</p><p>Bible text: World English Bible (public domain). Cross-references: <a href="https://www.openbible.info/labs/cross-references/">OpenBible.info</a>, CC-BY 4.0. Embeddings: nomic-embed-text-v1.5, Apache-2.0. Source and license on <a href="https://github.com/walking-wisely/bible-mcp">GitHub</a>.</p></div></footer>
+<script src="/site.js" defer></script>
+</body>
+</html>

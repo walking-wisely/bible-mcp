@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161411" media="(prefers-color-scheme: dark)">
+<title>Bible MCP for Cursor, VS Code, Codex and more</title>
+<meta name="description" content="Copy-paste Bible MCP setup for Cursor, VS Code Copilot, Codex CLI, Windsurf, Cline, Zed, JetBrains, Continue, Goose and opencode, with one-click install buttons.">
+<link rel="canonical" href="https://bible-mcp.ivan-dutov.com/guides/developer-tools">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Bible MCP">
+<meta property="og:title" content="Bible MCP for Cursor, VS Code, Codex and more">
+<meta property="og:description" content="Copy-paste Bible MCP setup for Cursor, VS Code Copilot, Codex CLI, Windsurf, Cline, Zed, JetBrains, Continue, Goose and opencode, with one-click install buttons.">
+<meta property="og:url" content="https://bible-mcp.ivan-dutov.com/guides/developer-tools">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header><div class="wrap"><a class="brand" href="/"><img src="/favicon.svg" alt="" width="22" height="22">Bible MCP</a><nav aria-label="Main"><a href="/">Home</a><a href="/guides/" aria-current="page">Setup guides</a><a href="https://github.com/walking-wisely/bible-mcp">GitHub</a></nav></div></header>
+<main id="main" class="wrap">
+<p class="crumb"><a href="/guides/">All setup guides</a></p>
+<h1>Add the Bible to developer tools</h1>
+<p class="lead">Copy-paste setup for Cursor, VS Code, Codex CLI, Windsurf, Cline, Zed, JetBrains, Continue, Goose, opencode and any other MCP client.</p>
+<p class="note">Steps checked against each app's own help pages in November 2026. App menus change often, so if a label looks different, look for the closest match.</p>
+<p>Every snippet uses the same address and the name <code>bible</code>:</p>
+<div class="addr"><code>https://bible-mcp.ivan-dutov.com/mcp</code></div>
+<p>Jump to: <a href="#cursor">Cursor</a>, <a href="#vscode">VS Code</a>, <a href="#codex">Codex CLI</a>, <a href="#windsurf">Windsurf</a>, <a href="#cline">Cline</a>, <a href="#zed">Zed</a>, <a href="#jetbrains">JetBrains</a>, <a href="#continue">Continue</a>, <a href="#goose">Goose</a>, <a href="#opencode">opencode</a>, <a href="#other">any other client</a>. For Claude Code and Gemini CLI see their own guides: <a href="/guides/claude-code">Claude Code</a>, <a href="/guides/gemini">Gemini</a>.</p>
+
+<h2 id="cursor">Cursor</h2>
+<div class="badges"><a class="btn" href="cursor://anysphere.cursor-deeplink/mcp/install?name=bible&config=eyJ1cmwiOiJodHRwczovL2JpYmxlLW1jcC5pdmFuLWR1dG92LmNvbS9tY3AifQ%3D%3D">Add to Cursor</a></div>
+<p>Or put this in <code>~/.cursor/mcp.json</code> (all projects) or <code>.cursor/mcp.json</code> (one project):</p>
+<pre><code>{
+  &quot;mcpServers&quot;: {
+    &quot;bible&quot;: {
+      &quot;url&quot;: &quot;https://bible-mcp.ivan-dutov.com/mcp&quot;
+    }
+  }
+}</code></pre>
+
+<h2 id="vscode">VS Code with GitHub Copilot</h2>
+<div class="badges"><a class="btn" href="vscode:mcp/install?%7B%22name%22%3A%22bible%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fbible-mcp.ivan-dutov.com%2Fmcp%22%7D">Install in VS Code</a></div>
+<p>Or put this in <code>.vscode/mcp.json</code>. VS Code uses the key <code>servers</code>, not <code>mcpServers</code>:</p>
+<pre><code>{
+  &quot;servers&quot;: {
+    &quot;bible&quot;: {
+      &quot;type&quot;: &quot;http&quot;,
+      &quot;url&quot;: &quot;https://bible-mcp.ivan-dutov.com/mcp&quot;
+    }
+  }
+}</code></pre>
+
+<h2 id="codex">OpenAI Codex CLI</h2>
+<pre><code>codex mcp add bible --url https://bible-mcp.ivan-dutov.com/mcp</code></pre>
+<p>Or add this to <code>~/.codex/config.toml</code>:</p>
+<pre><code>[mcp_servers.bible]
+url = &quot;https://bible-mcp.ivan-dutov.com/mcp&quot;</code></pre>
+
+<h2 id="windsurf">Windsurf (now Devin Desktop)</h2>
+<p>Windsurf's docs have moved to Devin. Add this to <code>.devin/mcp_config.json</code> in a project, or <code>~/.config/devin/mcp_config.json</code> for all projects. Older Windsurf builds used <code>serverUrl</code> in <code>~/.codeium/windsurf/mcp_config.json</code> instead.</p>
+<pre><code>{
+  &quot;mcpServers&quot;: {
+    &quot;bible&quot;: {
+      &quot;url&quot;: &quot;https://bible-mcp.ivan-dutov.com/mcp&quot;,
+      &quot;transport&quot;: &quot;http&quot;
+    }
+  }
+}</code></pre>
+
+<h2 id="cline">Cline</h2>
+<p>In Cline's MCP settings file (<code>cline_mcp_settings.json</code>). Always set <code>type</code>, or Cline falls back to the older SSE protocol:</p>
+<pre><code>{
+  &quot;mcpServers&quot;: {
+    &quot;bible&quot;: {
+      &quot;type&quot;: &quot;streamableHttp&quot;,
+      &quot;url&quot;: &quot;https://bible-mcp.ivan-dutov.com/mcp&quot;
+    }
+  }
+}</code></pre>
+
+<h2 id="zed">Zed</h2>
+<p>Open the settings file (command: <strong>zed: open settings file</strong>) and add:</p>
+<pre><code>{
+  &quot;context_servers&quot;: {
+    &quot;bible&quot;: {
+      &quot;url&quot;: &quot;https://bible-mcp.ivan-dutov.com/mcp&quot;
+    }
+  }
+}</code></pre>
+
+<h2 id="jetbrains">JetBrains AI Assistant</h2>
+<ol>
+<li>Open <strong>Settings</strong>, then <strong>Tools</strong>, <strong>AI Assistant</strong>, <strong>Model Context Protocol (MCP)</strong>.</li>
+<li>Click <strong>Add</strong> and choose the <strong>HTTP</strong> connection type.</li>
+<li>Paste the following, choose global or project level, then click <strong>OK</strong> and <strong>Apply</strong>:
+<pre><code>{
+  &quot;mcpServers&quot;: {
+    &quot;bible&quot;: {
+      &quot;url&quot;: &quot;https://bible-mcp.ivan-dutov.com/mcp&quot;
+    }
+  }
+}</code></pre></li>
+</ol>
+
+<h2 id="continue">Continue</h2>
+<p>Create <code>.continue/mcpServers/bible.yaml</code> in your workspace:</p>
+<pre><code>mcpServers:
+  - name: bible
+    type: streamable-http
+    url: https://bible-mcp.ivan-dutov.com/mcp</code></pre>
+
+<h2 id="goose">Goose</h2>
+<div class="badges"><a class="btn" href="goose://extension?url=https%3A%2F%2Fbible-mcp.ivan-dutov.com%2Fmcp&type=streamable_http&id=bible&name=Bible&description=Search%20the%20Bible">Add to Goose</a></div>
+<p>Or run <code>goose configure</code> and choose <strong>Remote Extension (Streamable HTTP)</strong>, or add this under <code>extensions</code> in <code>~/.config/goose/config.yaml</code>:</p>
+<pre><code>  bible:
+    type: streamable_http
+    uri: https://bible-mcp.ivan-dutov.com/mcp
+    enabled: true
+    timeout: 300</code></pre>
+
+<h2 id="opencode">opencode</h2>
+<pre><code>opencode mcp add bible --url https://bible-mcp.ivan-dutov.com/mcp</code></pre>
+<p>Or in <code>opencode.json</code>:</p>
+<pre><code>{
+  &quot;$schema&quot;: &quot;https://opencode.ai/config.json&quot;,
+  &quot;mcp&quot;: {
+    &quot;bible&quot;: {
+      &quot;type&quot;: &quot;remote&quot;,
+      &quot;url&quot;: &quot;https://bible-mcp.ivan-dutov.com/mcp&quot;,
+      &quot;enabled&quot;: true
+    }
+  }
+}</code></pre>
+
+<h2 id="other">Any other MCP client</h2>
+<p>Bible MCP is a standard remote server. In any client that supports MCP over streamable HTTP, add a server with these details:</p>
+<div class="table-wrap"><table>
+<thead><tr><th scope="col">Setting</th><th scope="col">Value</th></tr></thead>
+<tr><td>Transport</td><td>Streamable HTTP</td></tr>
+<tr><td>URL</td><td><code>https://bible-mcp.ivan-dutov.com/mcp</code></td></tr>
+<tr><td>Authentication</td><td>None</td></tr>
+</table></div>
+<p>The Cursor, VS Code and Goose buttons use each tool's own install link. Formats were checked against the vendors' docs in November 2026. Please <a href="https://github.com/walking-wisely/bible-mcp/issues">report any that no longer work</a>.</p>
+
+<h2>Didn't work?</h2>
+<ul>
+<li>Copy the address exactly, including <code>https://</code> and the <code>/mcp</code> at the end.</li>
+<li>The server needs no sign-in and no key. If a screen asks for credentials, choose the "none" option.</li>
+<li>Start a new chat after adding it, and make sure the Bible is switched on for that chat.</li>
+<li>Still stuck? <a href="https://github.com/walking-wisely/bible-mcp/issues">Open an issue on GitHub</a> and say which app and which step.</li>
+</ul>
+</main>
+<footer><div class="wrap"><p class="amen">Jesus is King.</p><p>Bible text: World English Bible (public domain). Cross-references: <a href="https://www.openbible.info/labs/cross-references/">OpenBible.info</a>, CC-BY 4.0. Embeddings: nomic-embed-text-v1.5, Apache-2.0. Source and license on <a href="https://github.com/walking-wisely/bible-mcp">GitHub</a>.</p></div></footer>
+<script src="/site.js" defer></script>
+</body>
+</html>

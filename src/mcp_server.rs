@@ -111,6 +111,12 @@ pub const MAX_QUERY_CHARS: usize = 200;
 #[tool_router]
 impl BibleServer {
     #[tool(
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        ),
         description = "Hybrid semantic + keyword search over all ~31K Bible verses (World English Bible). Returns the most relevant verses for a topic, theme, concept, or phrase. Optionally filter by book."
     )]
     async fn search_verses(
@@ -154,6 +160,12 @@ impl BibleServer {
     }
 
     #[tool(
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        ),
         description = "Find verses similar to a given verse. Combines human-curated cross-references with vector similarity, so verses found both ways rank highest. Surfaces theologically intentional connections, not just word overlap."
     )]
     async fn similar_verses(
@@ -220,7 +232,15 @@ impl BibleServer {
         ok_json(results)
     }
 
-    #[tool(description = "Retrieve a single Bible verse by exact reference.")]
+    #[tool(
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        ),
+        description = "Retrieve a single Bible verse by exact reference."
+    )]
     async fn get_verse(
         &self,
         Parameters(args): Parameters<GetVerseArgs>,
@@ -242,7 +262,15 @@ impl BibleServer {
         }
     }
 
-    #[tool(description = "Retrieve a contiguous range of verses from one chapter.")]
+    #[tool(
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        ),
+        description = "Retrieve a contiguous range of verses from one chapter."
+    )]
     async fn get_passage(
         &self,
         Parameters(args): Parameters<GetPassageArgs>,

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161411" media="(prefers-color-scheme: dark)">
+<title>Add the Bible to ChatGPT: MCP setup guide | Bible MCP</title>
+<meta name="description" content="Step by step: add the free Bible MCP server to ChatGPT as a custom MCP plugin, with no sign-in or API key. Includes which plans support it.">
+<link rel="canonical" href="https://bible-mcp.ivan-dutov.com/guides/chatgpt">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Bible MCP">
+<meta property="og:title" content="Add the Bible to ChatGPT: MCP setup guide | Bible MCP">
+<meta property="og:description" content="Step by step: add the free Bible MCP server to ChatGPT as a custom MCP plugin, with no sign-in or API key. Includes which plans support it.">
+<meta property="og:url" content="https://bible-mcp.ivan-dutov.com/guides/chatgpt">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header><div class="wrap"><a class="brand" href="/"><img src="/favicon.svg" alt="" width="22" height="22">Bible MCP</a><nav aria-label="Main"><a href="/">Home</a><a href="/guides/" aria-current="page">Setup guides</a><a href="https://github.com/walking-wisely/bible-mcp">GitHub</a></nav></div></header>
+<main id="main" class="wrap">
+<p class="crumb"><a href="/guides/">All setup guides</a></p>
+<h1>Add the Bible to ChatGPT</h1>
+<p class="lead">ChatGPT can use Bible MCP through its custom MCP server support on the web.</p>
+<p class="note">Steps checked against each app's own help pages in November 2026. App menus change often, so if a label looks different, look for the closest match.</p>
+<div class="note"><strong>Plan needed.</strong> OpenAI offers custom MCP servers on Business, Enterprise and Edu plans, where only admins and owners can add them, and Pro has limited read-only support. Free and Plus are not listed on OpenAI's help page, so check it if that is your plan. Setup is on the web at chatgpt.com, not in the mobile app.</div>
+<h2>Steps</h2>
+<ol>
+<li>Open <strong>Plugins</strong> at chatgpt.com and click <strong>+</strong>, then <strong>Add custom MCP server</strong>.</li>
+<li>Set <strong>Name</strong> to <code>Bible</code>.</li>
+<li>Under <strong>Connection</strong>, paste this into <strong>Server URL</strong>:
+<pre><code>https://bible-mcp.ivan-dutov.com/mcp</code></pre></li>
+<li>Set <strong>Authentication</strong> to <strong>No authentication</strong>.</li>
+<li>Tick <strong>I understand and want to continue</strong>, then click <strong>Create as a plugin</strong>.</li>
+<li>Review the four tools it found and click <strong>Install</strong>.</li>
+<li>In a chat, type <strong>@</strong> and pick <strong>Bible</strong>.</li>
+</ol>
+<p>ChatGPT may ask you to confirm each tool call. That is ChatGPT's default for tools from custom servers.</p>
+<h2>Try it</h2>
+<p>Ask something like:</p>
+<ul>
+<li>"Search the Bible for verses about patience."</li>
+<li>"Show me Romans 8:28-30."</li>
+<li>"What other verses are related to John 3:16?"</li>
+</ul>
+<p>Source: <a href="https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt">OpenAI: connecting custom MCP servers in ChatGPT</a>.</p>
+<h2>Didn't work?</h2>
+<ul>
+<li>Copy the address exactly, including <code>https://</code> and the <code>/mcp</code> at the end.</li>
+<li>The server needs no sign-in and no key. If a screen asks for credentials, choose the "none" option.</li>
+<li>Start a new chat after adding it, and make sure the Bible is switched on for that chat.</li>
+<li>Still stuck? <a href="https://github.com/walking-wisely/bible-mcp/issues">Open an issue on GitHub</a> and say which app and which step.</li>
+</ul>
+</main>
+<footer><div class="wrap"><p class="amen">Jesus is King.</p><p>Bible text: World English Bible (public domain). Cross-references: <a href="https://www.openbible.info/labs/cross-references/">OpenBible.info</a>, CC-BY 4.0. Embeddings: nomic-embed-text-v1.5, Apache-2.0. Source and license on <a href="https://github.com/walking-wisely/bible-mcp">GitHub</a>.</p></div></footer>
+<script src="/site.js" defer></script>
+</body>
+</html>

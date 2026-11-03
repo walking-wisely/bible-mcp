@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161411" media="(prefers-color-scheme: dark)">
 <title>Add the Bible to Claude Code with one command | Bible MCP</title>
 <meta name="description" content="Connect Claude Code to the free Bible MCP server with a single claude mcp add command. Search verses by meaning and read passages from your terminal.">
 <link rel="canonical" href="https://bible-mcp.ivan-dutov.com/guides/claude-code">
@@ -14,11 +17,12 @@
 <meta name="twitter:card" content="summary">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "HowTo", "name": "Add the Bible MCP server to Claude Code", "step": [{"@type": "HowToStep", "name": "Add the server", "text": "Run: claude mcp add --scope user --transport http bible https://bible-mcp.ivan-dutov.com/mcp"}, {"@type": "HowToStep", "name": "Check the connection", "text": "Run claude mcp list and confirm bible is connected."}, {"@type": "HowToStep", "name": "Ask a question", "text": "Start a new session and ask Claude to search or read the Bible."}]}</script>
 </head>
 <body>
-<header><div class="wrap"><strong><a href="/">Bible MCP</a></strong><a href="/guides/claude-code">Claude Code</a><a href="/guides/claude-desktop">Claude Desktop</a><a href="/guides/run-locally">Run locally</a><a href="https://github.com/walking-wisely/bible-mcp">GitHub</a></div></header>
-<main class="wrap">
+<a class="skip" href="#main">Skip to content</a>
+<header><div class="wrap"><a class="brand" href="/"><img src="/favicon.svg" alt="" width="22" height="22">Bible MCP</a><nav aria-label="Main"><a href="/">Home</a><a href="/guides/" aria-current="page">Setup guides</a><a href="https://github.com/walking-wisely/bible-mcp">GitHub</a></nav></div></header>
+<main id="main" class="wrap">
+<p class="crumb"><a href="/guides/">All setup guides</a></p>
 <h1>Add the Bible to Claude Code</h1>
 <p class="lead">One command connects Claude Code to the hosted Bible MCP server. No sign-up and no API key.</p>
 <h2>Steps</h2>
@@ -29,13 +33,38 @@
 <li>Check the connection:
 <pre><code>claude mcp list</code></pre>
 You should see <code>bible</code> marked as connected.</li>
-<li>Start a new Claude Code session and ask a question, for example "Search the Bible for verses about patience" or "Show me Romans 8:28-30".</li>
+<li>Start a new Claude Code session and ask a question.</li>
 </ol>
+<h2>Share it with your team</h2>
+<p>Add <code>--scope project</code> to write a <code>.mcp.json</code> file in the repository, or paste this into one yourself:</p>
+<pre><code>{
+  &quot;mcpServers&quot;: {
+    &quot;bible&quot;: {
+      &quot;type&quot;: &quot;http&quot;,
+      &quot;url&quot;: &quot;https://bible-mcp.ivan-dutov.com/mcp&quot;
+    }
+  }
+}</code></pre>
+<p>The <code>type</code> field is required. Without it the entry is read as a local program and fails.</p>
 <h2>Remove it</h2>
 <pre><code>claude mcp remove bible</code></pre>
-<p>Prefer to keep everything on your computer? See <a href="/guides/run-locally">running Bible MCP locally</a>.</p>
-
+<h2>Try it</h2>
+<p>Ask something like:</p>
+<ul>
+<li>"Search the Bible for verses about patience."</li>
+<li>"Show me Romans 8:28-30."</li>
+<li>"What other verses are related to John 3:16?"</li>
+</ul>
+<p>Prefer to keep everything on your computer? See <a href="/guides/run-locally">running Bible MCP locally</a>. Source: <a href="https://code.claude.com/docs/en/mcp">Claude Code MCP docs</a>.</p>
+<h2>Didn't work?</h2>
+<ul>
+<li>Copy the address exactly, including <code>https://</code> and the <code>/mcp</code> at the end.</li>
+<li>The server needs no sign-in and no key. If a screen asks for credentials, choose the "none" option.</li>
+<li>Start a new chat after adding it, and make sure the Bible is switched on for that chat.</li>
+<li>Still stuck? <a href="https://github.com/walking-wisely/bible-mcp/issues">Open an issue on GitHub</a> and say which app and which step.</li>
+</ul>
 </main>
-<footer><div class="wrap"><p>Jesus is King.</p><p>Bible text: World English Bible (public domain). Cross-references: <a href="https://www.openbible.info/labs/cross-references/">OpenBible.info</a>, CC-BY 4.0. Embeddings: nomic-embed-text-v1.5, Apache-2.0. Source and license on <a href="https://github.com/walking-wisely/bible-mcp">GitHub</a>.</p></div></footer>
+<footer><div class="wrap"><p class="amen">Jesus is King.</p><p>Bible text: World English Bible (public domain). Cross-references: <a href="https://www.openbible.info/labs/cross-references/">OpenBible.info</a>, CC-BY 4.0. Embeddings: nomic-embed-text-v1.5, Apache-2.0. Source and license on <a href="https://github.com/walking-wisely/bible-mcp">GitHub</a>.</p></div></footer>
+<script src="/site.js" defer></script>
 </body>
 </html>

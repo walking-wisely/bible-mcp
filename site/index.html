@@ -3,53 +3,60 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bible MCP: free Bible search server for Claude and AI assistants</title>
-<meta name="description" content="Free MCP server that lets Claude and other AI assistants search the Bible by meaning, read passages and follow cross-references. One address, no sign-up.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161411" media="(prefers-color-scheme: dark)">
+<title>Bible MCP: free Bible search for Claude and AI assistants</title>
+<meta name="description" content="Free MCP server that lets Claude, ChatGPT and other AI assistants search the Bible by meaning, read passages and follow cross-references. No sign-up.">
 <link rel="canonical" href="https://bible-mcp.ivan-dutov.com/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Bible MCP">
-<meta property="og:title" content="Bible MCP: free Bible search server for Claude and AI assistants">
-<meta property="og:description" content="Free MCP server that lets Claude and other AI assistants search the Bible by meaning, read passages and follow cross-references. One address, no sign-up.">
+<meta property="og:title" content="Bible MCP: free Bible search for Claude and AI assistants">
+<meta property="og:description" content="Free MCP server that lets Claude, ChatGPT and other AI assistants search the Bible by meaning, read passages and follow cross-references. No sign-up.">
 <meta property="og:url" content="https://bible-mcp.ivan-dutov.com/">
 <meta name="twitter:card" content="summary">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Bible MCP", "applicationCategory": "DeveloperApplication", "operatingSystem": "Windows, macOS, Linux", "description": "A free MCP server for searching the Bible by meaning from AI assistants.", "url": "https://bible-mcp.ivan-dutov.com/", "downloadUrl": "https://github.com/walking-wisely/bible-mcp/releases", "codeRepository": "https://github.com/walking-wisely/bible-mcp", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "author": {"@type": "Person", "name": "Ivan Dutov"}}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is Bible MCP?", "acceptedAnswer": {"@type": "Answer", "text": "Bible MCP is a free Model Context Protocol server that lets AI assistants such as Claude search the whole Bible by meaning, look up a verse or passage, and follow cross-references."}}, {"@type": "Question", "name": "Which Bible translation does it use?", "acceptedAnswer": {"@type": "Answer", "text": "The World English Bible, a modern English translation in the public domain."}}, {"@type": "Question", "name": "Does it cost anything?", "acceptedAnswer": {"@type": "Answer", "text": "No. The hosted server is free to use, and the software can also be run on your own computer."}}, {"@type": "Question", "name": "Does it need an account or an API key?", "acceptedAnswer": {"@type": "Answer", "text": "No. Add the server address to your AI app and it works. There is no sign-up."}}, {"@type": "Question", "name": "Which apps work with it?", "acceptedAnswer": {"@type": "Answer", "text": "Any MCP client that supports remote servers over streamable HTTP, including Claude Code and Claude Desktop custom connectors. It can also run locally over stdio."}}, {"@type": "Question", "name": "Are there limits?", "acceptedAnswer": {"@type": "Answer", "text": "Search queries are limited to 200 characters, and each IP address is rate limited to keep the service available for everyone."}}, {"@type": "Question", "name": "Does it store my questions?", "acceptedAnswer": {"@type": "Answer", "text": "The hosted server needs no account, but search text is sent to an embedding provider (Fireworks) to be matched against the verses, and the web server logs IP addresses. To keep everything on your own computer, run the local version, which works offline after setup."}}]}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is Bible MCP?", "acceptedAnswer": {"@type": "Answer", "text": "Bible MCP is a free Model Context Protocol server that lets AI assistants such as Claude search the whole Bible by meaning, look up a verse or passage, and follow cross-references."}}, {"@type": "Question", "name": "Which Bible translation does it use?", "acceptedAnswer": {"@type": "Answer", "text": "The World English Bible, a modern English translation in the public domain."}}, {"@type": "Question", "name": "Does it cost anything?", "acceptedAnswer": {"@type": "Answer", "text": "No. The hosted server is free to use, and the software can also be run on your own computer."}}, {"@type": "Question", "name": "Does it need an account or an API key?", "acceptedAnswer": {"@type": "Answer", "text": "No. Add the server address to your AI app and it works. There is no sign-up."}}, {"@type": "Question", "name": "Which apps work with it?", "acceptedAnswer": {"@type": "Answer", "text": "Any app that supports remote MCP servers over streamable HTTP, including Claude, ChatGPT on supported plans, Gemini, Perplexity, Mistral Le Chat, Grok, Claude Code, Cursor and VS Code. See the setup guides for exact steps. It can also run locally over stdio."}}, {"@type": "Question", "name": "Does it work with Microsoft Copilot?", "acceptedAnswer": {"@type": "Answer", "text": "The consumer Copilot app does not let you add your own MCP servers. GitHub Copilot in VS Code does."}}, {"@type": "Question", "name": "Are there limits?", "acceptedAnswer": {"@type": "Answer", "text": "Search queries are limited to 200 characters, and each IP address is rate limited to keep the service available for everyone."}}, {"@type": "Question", "name": "Does it store my questions?", "acceptedAnswer": {"@type": "Answer", "text": "The hosted server needs no account, but search text is sent to an embedding provider (Fireworks) to be matched against the verses, and the web server logs IP addresses. To keep everything on your own computer, run the local version, which works offline after setup."}}]}</script>
 </head>
 <body>
-<header><div class="wrap"><strong><a href="/">Bible MCP</a></strong><a href="/guides/claude-code">Claude Code</a><a href="/guides/claude-desktop">Claude Desktop</a><a href="/guides/run-locally">Run locally</a><a href="https://github.com/walking-wisely/bible-mcp">GitHub</a></div></header>
-<main class="wrap">
-<h1>Bible search for Claude and other AI assistants</h1>
-<p class="lead">Bible MCP is a free MCP server. Add one address to your AI app and it can search all 31,000 verses of the World English Bible by meaning, read any passage, and follow cross-references.</p>
-
-<h2>Add it in one step</h2>
-<p>The server address is:</p>
-<pre><code>https://bible-mcp.ivan-dutov.com/mcp</code></pre>
-<p>In Claude Code, run:</p>
-<pre><code>claude mcp add --transport http bible https://bible-mcp.ivan-dutov.com/mcp</code></pre>
-<p>Step by step guides: <a href="/guides/claude-code">Claude Code</a>, <a href="/guides/claude-desktop">Claude Desktop</a>, and <a href="/guides/run-locally">running it on your own computer</a>.</p>
+<a class="skip" href="#main">Skip to content</a>
+<header><div class="wrap"><a class="brand" href="/"><img src="/favicon.svg" alt="" width="22" height="22">Bible MCP</a><nav aria-label="Main"><a href="/" aria-current="page">Home</a><a href="/guides/">Setup guides</a><a href="https://github.com/walking-wisely/bible-mcp">GitHub</a></nav></div></header>
+<main id="main" class="wrap">
+<h1>Bible search for Claude, ChatGPT and other AI assistants</h1>
+<p class="lead">Bible MCP is a free server you add to your AI app with one address. Your assistant can then search all 31,000 verses of the World English Bible by meaning, read any passage, and follow cross-references.</p>
+<p><strong>Copy this address</strong>, then follow the guide for your app:</p>
+<div class="addr"><code>https://bible-mcp.ivan-dutov.com/mcp</code></div>
+<div class="cards">
+<a class="card" href="/guides/claude"><h3>Claude</h3><p>claude.ai, Desktop and mobile</p></a>
+<a class="card" href="/guides/chatgpt"><h3>ChatGPT</h3><p>Business, Enterprise and Edu plans</p></a>
+<a class="card" href="/guides/gemini"><h3>Gemini</h3><p>App and command line</p></a>
+<a class="card" href="/guides/claude-code"><h3>Claude Code</h3><p>One command</p></a>
+<a class="card" href="/guides/developer-tools"><h3>Cursor, VS Code and more</h3><p>One-click install buttons</p></a>
+<a class="card" href="/guides/"><h3>All guides</h3><p>Perplexity, Le Chat, Grok and local install</p></a>
+</div>
 
 <h2>What your assistant can do with it</h2>
 <div class="cards">
-<div class="card"><strong>Search by meaning</strong><p>Ask about a theme like "God comforts those who are afraid" and get the best matching verses, not just exact word matches.</p></div>
-<div class="card"><strong>Read any verse or passage</strong><p>Look up John 3:16 or Romans 8:28-39. Book names are forgiving: Jn, 1 Cor, First Kings and Song of Songs all work.</p></div>
-<div class="card"><strong>Follow cross-references</strong><p>Find related verses from curated cross-references combined with similar wording and meaning.</p></div>
+<div class="card"><h3>Search by meaning</h3><p>Ask about a theme like "God comforts those who are afraid" and get the best matching verses, not just exact word matches.</p></div>
+<div class="card"><h3>Read any passage</h3><p>Look up John 3:16 or Romans 8:28-39. Book names are forgiving: Jn, 1 Cor, First Kings and Song of Songs all work.</p></div>
+<div class="card"><h3>Follow cross-references</h3><p>Find related verses from curated cross-references combined with similar wording and meaning.</p></div>
 </div>
 
-<h2>Tools</h2>
-<table>
-<tr><th>Tool</th><th>What it does</th></tr>
+<h2>Frequently asked questions</h2>
+<details><summary>What is Bible MCP?</summary><p>Bible MCP is a free Model Context Protocol server that lets AI assistants such as Claude search the whole Bible by meaning, look up a verse or passage, and follow cross-references.</p></details><details><summary>Which Bible translation does it use?</summary><p>The World English Bible, a modern English translation in the public domain.</p></details><details><summary>Does it cost anything?</summary><p>No. The hosted server is free to use, and the software can also be run on your own computer.</p></details><details><summary>Does it need an account or an API key?</summary><p>No. Add the server address to your AI app and it works. There is no sign-up.</p></details><details><summary>Which apps work with it?</summary><p>Any app that supports remote MCP servers over streamable HTTP, including Claude, ChatGPT on supported plans, Gemini, Perplexity, Mistral Le Chat, Grok, Claude Code, Cursor and VS Code. See the setup guides for exact steps. It can also run locally over stdio.</p></details><details><summary>Does it work with Microsoft Copilot?</summary><p>The consumer Copilot app does not let you add your own MCP servers. GitHub Copilot in VS Code does.</p></details><details><summary>Are there limits?</summary><p>Search queries are limited to 200 characters, and each IP address is rate limited to keep the service available for everyone.</p></details><details><summary>Does it store my questions?</summary><p>The hosted server needs no account, but search text is sent to an embedding provider (Fireworks) to be matched against the verses, and the web server logs IP addresses. To keep everything on your own computer, run the local version, which works offline after setup.</p></details>
+
+<h2>For developers: the tools</h2>
+<div class="table-wrap"><table>
+<thead><tr><th scope="col">Tool</th><th scope="col">What it does</th></tr></thead>
 <tr><td><code>search_verses</code></td><td>Finds verses by meaning and keywords, optionally within one book.</td></tr>
 <tr><td><code>similar_verses</code></td><td>Finds verses related to a given verse.</td></tr>
 <tr><td><code>get_verse</code></td><td>Returns one verse by reference.</td></tr>
 <tr><td><code>get_passage</code></td><td>Returns a run of verses from one chapter.</td></tr>
-</table>
-
-<h2>Frequently asked questions</h2>
-<h3>What is Bible MCP?</h3><p>Bible MCP is a free Model Context Protocol server that lets AI assistants such as Claude search the whole Bible by meaning, look up a verse or passage, and follow cross-references.</p><h3>Which Bible translation does it use?</h3><p>The World English Bible, a modern English translation in the public domain.</p><h3>Does it cost anything?</h3><p>No. The hosted server is free to use, and the software can also be run on your own computer.</p><h3>Does it need an account or an API key?</h3><p>No. Add the server address to your AI app and it works. There is no sign-up.</p><h3>Which apps work with it?</h3><p>Any MCP client that supports remote servers over streamable HTTP, including Claude Code and Claude Desktop custom connectors. It can also run locally over stdio.</p><h3>Are there limits?</h3><p>Search queries are limited to 200 characters, and each IP address is rate limited to keep the service available for everyone.</p><h3>Does it store my questions?</h3><p>The hosted server needs no account, but search text is sent to an embedding provider (Fireworks) to be matched against the verses, and the web server logs IP addresses. To keep everything on your own computer, run the local version, which works offline after setup.</p>
-
+</table></div>
 </main>
-<footer><div class="wrap"><p>Jesus is King.</p><p>Bible text: World English Bible (public domain). Cross-references: <a href="https://www.openbible.info/labs/cross-references/">OpenBible.info</a>, CC-BY 4.0. Embeddings: nomic-embed-text-v1.5, Apache-2.0. Source and license on <a href="https://github.com/walking-wisely/bible-mcp">GitHub</a>.</p></div></footer>
+<footer><div class="wrap"><p class="amen">Jesus is King.</p><p>Bible text: World English Bible (public domain). Cross-references: <a href="https://www.openbible.info/labs/cross-references/">OpenBible.info</a>, CC-BY 4.0. Embeddings: nomic-embed-text-v1.5, Apache-2.0. Source and license on <a href="https://github.com/walking-wisely/bible-mcp">GitHub</a>.</p></div></footer>
+<script src="/site.js" defer></script>
 </body>
 </html>

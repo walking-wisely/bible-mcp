@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Run the Bible MCP server on your own computer | Bible MCP</title>
+<meta name="description" content="Install Bible MCP locally for Claude Desktop or Claude Code. One setup command downloads the Bible database and search model, then works offline.">
+<link rel="canonical" href="https://bible-mcp.ivan-dutov.com/guides/run-locally">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Bible MCP">
+<meta property="og:title" content="Run the Bible MCP server on your own computer | Bible MCP">
+<meta property="og:description" content="Install Bible MCP locally for Claude Desktop or Claude Code. One setup command downloads the Bible database and search model, then works offline.">
+<meta property="og:url" content="https://bible-mcp.ivan-dutov.com/guides/run-locally">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header><div class="wrap"><strong><a href="/">Bible MCP</a></strong><a href="/guides/claude-code">Claude Code</a><a href="/guides/claude-desktop">Claude Desktop</a><a href="/guides/run-locally">Run locally</a><a href="https://github.com/walking-wisely/bible-mcp">GitHub</a></div></header>
+<main class="wrap">
+<h1>Run Bible MCP on your computer</h1>
+<p class="lead">The local version keeps everything on your machine and works offline after setup.</p>
+<h2>Steps</h2>
+<ol>
+<li>Download the archive for your system from the <a href="https://github.com/walking-wisely/bible-mcp/releases">releases page</a> and unpack it. Keep the <code>onnxruntime</code> library next to the <code>bible-mcp</code> program.</li>
+<li>Run setup once:
+<pre><code>./bible-mcp setup</code></pre>
+It downloads the Bible database (about 120 MB), builds a search index, downloads the embedding model (about 550 MB) and adds the server to Claude Desktop.</li>
+<li>Restart Claude Desktop. For Claude Code, add it yourself with the full path:
+<pre><code>claude mcp add bible -- /full/path/to/bible-mcp serve</code></pre></li>
+</ol>
+<h2>Platforms</h2>
+<p>Archives are built for Windows (x64), Linux (x64) and macOS on Apple silicon. On macOS the program is not code-signed yet, so the first run may be blocked. Open System Settings, then Privacy and Security, and choose Open Anyway.</p>
+<p>Run <code>bible-mcp status</code> to see where each piece is stored.</p>
+
+</main>
+<footer><div class="wrap"><p>Jesus is King.</p><p>Bible text: World English Bible (public domain). Cross-references: <a href="https://www.openbible.info/labs/cross-references/">OpenBible.info</a>, CC-BY 4.0. Embeddings: nomic-embed-text-v1.5, Apache-2.0. Source and license on <a href="https://github.com/walking-wisely/bible-mcp">GitHub</a>.</p></div></footer>
+</body>
+</html>

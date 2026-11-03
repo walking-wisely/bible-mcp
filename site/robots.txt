@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://bible-mcp.ivan-dutov.com/sitemap.xml

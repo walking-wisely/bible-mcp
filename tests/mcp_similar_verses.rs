@@ -23,9 +23,13 @@ async fn similar_verses_prefers_cross_reference_hits() -> Result<()> {
 
     assert_eq!(verses.len(), 2);
     assert_eq!(verses[0]["reference"], "Romans 8:28");
-    assert_eq!(verses[0]["score"], 0.95);
     assert_eq!(verses[1]["reference"], "John 3:17");
-    assert!(verses[1].get("score").is_none());
+    let scores: Vec<f64> = verses
+        .iter()
+        .map(|v| v["score"].as_f64().expect("every result has a score"))
+        .collect();
+    assert!(scores.iter().all(|s| *s > 0.0 && *s <= 1.0));
+    assert!(scores[0] >= scores[1]);
 
     client.cancel().await?;
     Ok(())
